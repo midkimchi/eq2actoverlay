@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Minimal EQ2 Parse</title>
-<!-- Google Fonts for PT Sans Narrow -->
+<!-- Google Fonts for Roboto and PT Sans Narrow -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
 html, body { height: 100%; margin: 0; }
@@ -14,8 +14,7 @@ html, body { height: 100%; margin: 0; }
 :root {
     --bg: rgba(18, 18, 18, 1);
     --menu-bg: rgba(30, 30, 30, 1);
-
-    --fg: #e0e0e0;
+    --fg: #b8b8b8;
     --border: #333333;
     --row-alt: rgba(255, 255, 255, 0.03);
     --hover: #333333;
@@ -27,7 +26,7 @@ body {
     color: var(--fg);
     font-family: Segoe UI, sans-serif;
     font-size: 19px;
-    font-weight: bold;
+    font-weight: normal;
     padding: 8px 8px 0 8px;
     position: relative;
     overflow: hidden;
@@ -38,34 +37,11 @@ body {
 }
 
 /* THEMES */
-.theme-dark {
-    --fg: #e0e0e0;
-    --border: #333333;
-    --row-alt: rgba(255, 255, 255, 0.03);
-    --hover: #333333;
-    --menu-border: #333333;
-}
-.theme-light {
-    --fg: #222222;
-    --border: #cccccc;
-    --row-alt: rgba(0, 0, 0, 0.03);
-    --hover: #dddddd;
-    --menu-border: #cccccc;
-}
-.theme-terminal {
-    --fg: #00ff66;
-    --border: #00aa44;
-    --row-alt: rgba(0, 255, 102, 0.08);
-    --hover: #003322;
-    --menu-border: #00aa44;
-}
-.theme-highcontrast {
-    --fg: #ffff00;
-    --border: #ffffff;
-    --row-alt: rgba(255, 255, 0, 0.1);
-    --hover: #333300;
-    --menu-border: #ffffff;
-}
+.theme-dark { --fg: #b8b8b8; --border: #333333; --row-alt: rgba(255, 255, 255, 0.03); --hover: #333333; --menu-border: #333333; }
+.theme-light { --fg: #222222; --border: #cccccc; --row-alt: rgba(0, 0, 0, 0.03); --hover: #dddddd; --menu-border: #cccccc; }
+.theme-terminal { --fg: #00ff66; --border: #00aa44; --row-alt: rgba(0, 255, 102, 0.08); --hover: #003322; --menu-border: #00aa44; }
+.theme-highcontrast { --fg: #ffff00; --border: #ffffff; --row-alt: rgba(255, 255, 0, 0.1); --hover: #333300; --menu-border: #ffffff; }
+.theme-royalblue { --fg: #4169e1; --border: #2a437e; --row-alt: rgba(65, 105, 225, 0.05); --hover: rgba(65, 105, 225, 0.15); --menu-border: #2a437e; }
 
 /* HEADER */
 #header {
@@ -82,7 +58,7 @@ body {
 #header-left { display: flex; align-items: center; gap: 6px; padding-left: 10px; }
 #header-right { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
 #duration { min-width: 60px; text-align: right; }
-#menu-button { font-size: 20px; cursor: pointer; user-select: none; padding: 2px 4px; }
+#menu-button { font-size: 20px; cursor: pointer; user-select: none; padding: 2px 4px; position: relative; top: -4px; }
 
 /* MAIN MENU */
 #menu {
@@ -140,10 +116,7 @@ body {
     border-left: 2px solid var(--border);
     font-size: 14px;
 }
-.submenu-nested.disabled {
-    opacity: 0.35;
-    pointer-events: none;
-}
+.submenu-nested.disabled { opacity: 0.35; pointer-events: none; }
 
 .checkmark { color: #6cf; font-weight: bold; padding-left: 10px; }
 
@@ -162,63 +135,62 @@ body {
     font-size: 14px;
 }
 .submenu-buttons button:hover { background-color: var(--hover); }
-.submenu-buttons button.active {
-    background-color: var(--hover);
-    border-color: var(--fg);
-}
-.submenu-buttons button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
+.submenu-buttons button.active { background-color: var(--hover); border-color: var(--fg); }
+.submenu-buttons button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* TABLE & COLUMN VISIBILITY HINTS */
+/* TABLE & CONTAINER */
 #table-container {
     position: absolute;
     top: 58px;
     left: 14px;
-    bottom: 48px;
+    bottom: 8px;
     right: 8px;
     overflow-y: auto;
     overflow-x: hidden;
     pointer-events: auto;
 }
 
-table { width: 100%; border-collapse: collapse; table-layout: fixed; pointer-events: auto; }
+#main-table {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-variant-numeric: tabular-nums;
+    pointer-events: auto;
+}
 
 th, td {
     padding: 3px 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-weight: bold;
     pointer-events: auto;
     color: var(--fg);
 }
 
 th {
-    color: var(--fg);
+    font-weight: bold;
     font-size: inherit;
     text-transform: uppercase;
     border-bottom: 1px solid var(--border);
-    position: relative;
-    cursor: pointer;
+    position: sticky;
+    top: 0;
+    background-color: var(--bg);
+    z-index: 10;
+    cursor: grab;
 }
+td { font-weight: normal; }
+th:active { cursor: grabbing; }
+th.dragging { opacity: 0.5; background-color: var(--hover); }
 
 tr:nth-child(even) { background-color: var(--row-alt); }
+tr.highlighted-row { background-color: rgba(65, 105, 225, 0.3) !important; }
+tr.highlighted-row.bold-tracked td { font-weight: bold; }
 
-.name    { text-align: left; }
-.dps     { text-align: center; }
-.hps     { text-align: center; }
-.cures   { text-align: center; }
-.healing { text-align: center; }
-.damage  { text-align: center; }
-
-th.name    { text-align: left; }
-th.dps     { text-align: center; }
-th.hps     { text-align: center; }
-th.cures   { text-align: center; }
-th.healing { text-align: center; }
-th.damage  { text-align: center; }
+.name, th.name { text-align: left; }
+.dps, .hps, .cures, .healing, .damage,
+th.dps, th.hps, th.cures, th.healing, th.damage { text-align: center; }
+.name { cursor: pointer; }
 
 .class-icon {
     width: 18px;
@@ -229,18 +201,14 @@ th.damage  { text-align: center; }
     object-fit: contain;
 }
 
-.sort-indicator {
-    font-size: 0.85em;
-    margin-left: 4px;
-    display: inline-block;
-}
+.sort-indicator { font-size: 0.85em; margin-left: 4px; display: inline-block; }
 
-/* CSS-driven column hiding for high performance */
-table.hide-dps .dps, table.hide-dps th.dps { display: none !important; }
-table.hide-hps .hps, table.hide-hps th.hps { display: none !important; }
-table.hide-cures .cures, table.hide-cures th.cures { display: none !important; }
-table.hide-healing .healing, table.hide-healing th.healing { display: none !important; }
-table.hide-damage .damage, table.hide-damage th.damage { display: none !important; }
+/* CSS-driven column hiding */
+table.hide-dps .dps { display: none !important; }
+table.hide-hps .hps { display: none !important; }
+table.hide-cures .cures { display: none !important; }
+table.hide-healing .healing { display: none !important; }
+table.hide-damage .damage { display: none !important; }
 
 .col-resize {
     position: absolute;
@@ -254,17 +222,13 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
     pointer-events: auto;
 }
 
-/* TOTALS */
-#totals-table {
-    position: absolute;
-    bottom: 8px;
-    left: 14px;
-    right: 8px;
-    background-color: transparent;
+/* TOTALS FOOTER */
+#main-table tfoot td {
     border-top: 1px solid var(--border);
-}
-#totals-table td {
-    padding: 3px 4px;
+    position: sticky;
+    bottom: 0;
+    background-color: var(--bg);
+    z-index: 10;
     font-size: inherit;
     font-weight: bold;
     color: var(--fg);
@@ -276,12 +240,8 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
 
 <!-- MENU -->
 <div id="menu">
-
-    <!-- Font Style -->
     <div class="menu-section">
-        <div id="font-style-toggle" class="menu-header">
-            <span>Font Style</span><span id="font-style-arrow">▸</span>
-        </div>
+        <div id="font-style-toggle" class="menu-header"><span>Font Style</span><span id="font-style-arrow">▸</span></div>
         <div id="font-style-menu" class="submenu">
             <div class="submenu-item" data-font="Segoe UI, sans-serif"><span style="font-family: 'Segoe UI', sans-serif;">Segoe UI</span><span class="checkmark"></span></div>
             <div class="submenu-item" data-font="Roboto, sans-serif"><span style="font-family: 'Roboto', sans-serif;">Roboto</span><span class="checkmark"></span></div>
@@ -292,11 +252,8 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
         </div>
     </div>
 
-    <!-- Font Size -->
     <div class="menu-section">
-        <div id="font-size-toggle" class="menu-header">
-            <span>Font Size</span><span id="font-size-arrow">▸</span>
-        </div>
+        <div id="font-size-toggle" class="menu-header"><span>Font Size</span><span id="font-size-arrow">▸</span></div>
         <div id="font-size-menu" class="submenu">
             <div class="submenu-item" data-size="13"><span>13</span><span class="checkmark"></span></div>
             <div class="submenu-item" data-size="15"><span>15</span><span class="checkmark"></span></div>
@@ -306,20 +263,20 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
         </div>
     </div>
 
-    <!-- Themes -->
     <div class="menu-section">
-        <div id="themes-toggle" class="menu-header">
-            <span>Themes</span><span id="themes-arrow">▸</span>
-        </div>
+        <div id="themes-toggle" class="menu-header"><span>Themes</span><span id="themes-arrow">▸</span></div>
         <div id="themes-menu" class="submenu">
-            <!-- Themes -->
-            <div class="submenu-item" data-theme="dark"><span>Theme: Dark</span><span class="checkmark"></span></div>
-            <div class="submenu-item" data-theme="light"><span>Theme: Light</span><span class="checkmark"></span></div>
-            <div class="submenu-item" data-theme="terminal"><span>Theme: Terminal Green</span><span class="checkmark"></span></div>
-            <div class="submenu-item" data-theme="highcontrast"><span>Theme: High Contrast</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="dark"><span>Dark</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="light"><span>Light</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="terminal"><span>Terminal Green</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="highcontrast"><span>High Contrast</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="royalblue"><span>Royal Blue</span><span class="checkmark"></span></div>
+        </div>
+    </div>
 
-            <!-- Transparency -->
-            <div class="submenu-item"><span>Transparency</span></div>
+    <div class="menu-section">
+        <div id="transparency-toggle" class="menu-header"><span>Transparency</span><span id="transparency-arrow">▸</span></div>
+        <div id="transparency-menu" class="submenu">
             <div class="submenu-buttons" id="transparency-buttons">
                 <button data-trans="0.25">25%</button>
                 <button data-trans="0.50">50%</button>
@@ -329,13 +286,9 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
         </div>
     </div>
 
-    <!-- Data -->
     <div class="menu-section">
-        <div id="data-toggle" class="menu-header">
-            <span>Data</span><span id="data-arrow">▸</span>
-        </div>
+        <div id="data-toggle" class="menu-header"><span>Data</span><span id="data-arrow">▸</span></div>
         <div id="data-menu" class="submenu">
-            <!-- Row Limit -->
             <div class="submenu-item"><span>Row Limit</span></div>
             <div class="submenu-buttons" id="rowlimit-buttons">
                 <button data-rowlimit="6">6</button>
@@ -343,7 +296,6 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
                 <button data-rowlimit="24">24</button>
             </div>
 
-            <!-- Column toggles -->
             <div class="submenu-item"><span>Show DPS</span><input id="toggle-dps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show HPS</span><input id="toggle-hps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show Cures</span><input id="toggle-cures" type="checkbox" checked></div>
@@ -352,7 +304,6 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
             <div class="submenu-item"><span>Show Damage</span><input id="toggle-damage" type="checkbox"></div>
             <div class="submenu-item submenu-nested" id="short-damage-container"><span>Use short damage values</span><input id="toggle-short-damage" type="checkbox"></div>
 
-            <!-- Sort By -->
             <div class="submenu-item"><span>Sort By</span></div>
             <div class="submenu-buttons" id="sortby-buttons">
                 <button data-sort="name">Name</button>
@@ -363,12 +314,14 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
                 <button data-sort="damage">Damage</button>
             </div>
 
-            <!-- Sort Order -->
             <div class="submenu-item"><span>Sort Order</span></div>
             <div class="submenu-buttons" id="sortorder-buttons">
                 <button data-order="asc">Asc</button>
                 <button data-order="desc">Desc</button>
             </div>
+
+            <div class="submenu-item"><span>Enable triple click target tracking</span><input id="toggle-triple-click" type="checkbox"></div>
+            <div class="submenu-item submenu-nested" id="bold-tracked-container"><span>Enable bold tracked row</span><input id="toggle-bold-tracked" type="checkbox"></div>
         </div>
     </div>
 </div>
@@ -382,104 +335,86 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
     </div>
 </div>
 
-<!-- TABLE -->
+<!-- TABLE CONTAINER -->
 <div id="table-container">
     <table id="main-table">
         <thead>
             <tr>
-                <th class="name"    data-col="name">Name<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="dps"     data-col="dps">DPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="hps"     data-col="hps">HPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="cures"   data-col="cures">Cures<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="name" data-col="name">Name<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="dps" data-col="dps">DPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="hps" data-col="hps">HPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="cures" data-col="cures">Cures<span class="sort-indicator"></span><span class="col-resize"></span></th>
                 <th class="healing" data-col="healing">Healing<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="damage"  data-col="damage">Damage<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="damage" data-col="damage">Damage<span class="sort-indicator"></span><span class="col-resize"></span></th>
             </tr>
         </thead>
         <tbody id="rows"></tbody>
+        <tfoot>
+            <tr>
+                <td class="name" data-col="name">Total:</td>
+                <td class="dps" data-col="dps" id="totals-dps">0</td>
+                <td class="hps" data-col="hps" id="totals-hps">0</td>
+                <td class="cures" data-col="cures" id="totals-cures">0</td>
+                <td class="healing" data-col="healing" id="totals-healing">0</td>
+                <td class="damage" data-col="damage" id="totals-damage">0</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
-
-<!-- TOTALS -->
-<table id="totals-table">
-    <tr>
-        <td id="totals-name"    class="name"    data-col="name">Total:</td>
-        <td id="totals-dps"     class="dps"     data-col="dps">0</td>
-        <td id="totals-hps"     class="hps"     data-col="hps">0</td>
-        <td id="totals-cures"   class="cures"   data-col="cures">0</td>
-        <td id="totals-healing" class="healing" data-col="healing">0</td>
-        <td id="totals-damage"  class="damage"  data-col="damage">0</td>
-    </tr>
-</table>
 
 <script src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
 
 <script>
-let rowLimit = 24;
-let sortBy = "dps";
-let sortOrder = "desc";
-let currentAlpha = 1.0;
-let currentTheme = "dark";
-let useShortDamage = false;
-let useShortHealing = false;
-let lastCombatData = null;
+let rowLimit = 24, sortBy = "dps", sortOrder = "desc", currentAlpha = 1.0, currentTheme = "dark";
+let useShortDamage = false, useShortHealing = false, enableTripleClick = false, enableBoldTracked = false;
+let lastCombatData = null, columnOrder = ["name", "dps", "hps", "cures", "healing", "damage"];
+let wasDragging = false, highlightedCombatantName = null;
 
 const themeColors = {
-    dark: { bg: "18, 18, 18", menu: "30, 30, 30" },
-    light: { bg: "245, 245, 245", menu: "255, 255, 255" },
-    terminal: { bg: "0, 0, 0", menu: "10, 10, 10" },
-    highcontrast: { bg: "0, 0, 0", menu: "0, 0, 0" }
+    dark: "18, 18, 18, 30, 30, 30".split(", "),
+    light: "245, 245, 245, 255, 255, 255".split(", "),
+    terminal: "0, 0, 0, 10, 10, 10".split(", "),
+    highcontrast: "0, 0, 0, 0, 0, 0".split(", "),
+    royalblue: "18, 18, 18, 30, 30, 30".split(", ")
 };
 
-function updateColors() {
-    const colors = themeColors[currentTheme] || themeColors.dark;
-    document.documentElement.style.setProperty("--bg", `rgba(${colors.bg}, ${currentAlpha})`);
-    document.documentElement.style.setProperty("--menu-bg", `rgba(${colors.menu}, ${currentAlpha})`);
-}
+const updateColors = () => {
+    const c = themeColors[currentTheme] || themeColors.dark;
+    document.documentElement.style.setProperty("--bg", `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${currentAlpha})`);
+    document.documentElement.style.setProperty("--menu-bg", `rgba(${c[3]}, ${c[4]}, ${c[5]}, ${currentAlpha})`);
+};
 
-function applyTransparency(val) {
+const applyTransparency = val => {
     currentAlpha = val;
     localStorage.setItem("overlayTransparency", val);
     updateColors();
-    updateTransparencyButtons(val);
-}
+    document.querySelectorAll("#transparency-buttons button").forEach(btn => btn.classList.toggle("active", btn.getAttribute("data-trans") === String(val)));
+};
 
-function updateTransparencyButtons(val) {
-    document.querySelectorAll("#transparency-buttons button").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-trans") === String(val));
+const updateActiveBtn = (selector, attr, val) => {
+    document.querySelectorAll(selector).forEach(btn => btn.classList.toggle("active", btn.getAttribute(attr) === String(val)));
+};
+
+const updateIndicators = (selector, attr, activeVal) => {
+    document.querySelectorAll(selector).forEach(item => {
+        item.querySelector(".checkmark").textContent = (item.getAttribute(attr) === activeVal) ? "✓" : "";
     });
-}
+};
 
-function updateRowLimitButtons(val) {
-    document.querySelectorAll("#rowlimit-buttons button").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-rowlimit") === String(val));
-    });
-}
+const formatNumber = (val, isShort) => {
+    const num = parseFloat(val) || 0;
+    if (isShort) {
+        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
+        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+    }
+    return Math.round(num).toLocaleString();
+};
 
-function updateSortButtons() {
-    document.querySelectorAll("#sortby-buttons button").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-sort") === sortBy);
-    });
-}
-
-function updateOrderButtons() {
-    document.querySelectorAll("#sortorder-buttons button").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-order") === sortOrder);
-    });
-}
-
-function updateSortIndicators() {
-    document.querySelectorAll("th[data-col]").forEach(th => {
-        const col = th.getAttribute("data-col");
-        const indicator = th.querySelector(".sort-indicator");
-        if (!indicator) return;
-
-        if (col === sortBy) {
-            indicator.textContent = sortOrder === "asc" ? "▴" : "▾";
-        } else {
-            indicator.textContent = "";
-        }
-    });
-}
+const getClassIcon = c => {
+    const job = (c.type || c.Job || c.class || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+    return job ? `images/classes/${job}.png` : "";
+};
 
 function loadSettings() {
     const savedFont = localStorage.getItem("overlayFontFamily");
@@ -488,328 +423,284 @@ function loadSettings() {
     const savedTrans = localStorage.getItem("overlayTransparency") || "1.00";
     const savedRowLimit = localStorage.getItem("overlayRowLimit") || "24";
     const savedColumns = localStorage.getItem("overlayColumns");
-    const savedSort = localStorage.getItem("overlaySort") || "dps";
-    const savedOrder = localStorage.getItem("overlayOrder") || "desc";
-    const savedShortDamage = localStorage.getItem("overlayShortDamage") === "true";
-    const savedShortHealing = localStorage.getItem("overlayShortHealing") === "true";
+    const savedColumnOrder = localStorage.getItem("overlayColumnOrder");
 
     if (savedFont) document.body.style.fontFamily = savedFont;
     if (savedSize) document.body.style.fontSize = savedSize + "px";
 
     rowLimit = parseInt(savedRowLimit, 10) || 24;
-    sortBy = savedSort;
-    sortOrder = savedOrder;
-    useShortDamage = savedShortDamage;
-    useShortHealing = savedShortHealing;
+    sortBy = localStorage.getItem("overlaySort") || "dps";
+    sortOrder = localStorage.getItem("overlayOrder") || "desc";
+    useShortDamage = localStorage.getItem("overlayShortDamage") === "true";
+    useShortHealing = localStorage.getItem("overlayShortHealing") === "true";
+    enableTripleClick = localStorage.getItem("overlayEnableTripleClick") === "true";
+    enableBoldTracked = localStorage.getItem("overlayBoldTracked") === "true";
+    highlightedCombatantName = localStorage.getItem("overlayHighlightedCombatant");
+
+    if (savedColumnOrder) {
+        try { const p = JSON.parse(savedColumnOrder); if (Array.isArray(p) && p.length === 6) columnOrder = p; } catch (e) {}
+    }
 
     document.getElementById("toggle-short-damage").checked = useShortDamage;
     document.getElementById("toggle-short-healing").checked = useShortHealing;
+    document.getElementById("toggle-triple-click").checked = enableTripleClick;
+    document.getElementById("toggle-bold-tracked").checked = enableBoldTracked;
 
     applyTheme(savedTheme);
     applyTransparency(savedTrans);
+    applyColumnOrder();
 
     if (savedColumns) {
         try {
             const cols = JSON.parse(savedColumns);
-            document.getElementById("toggle-dps").checked = cols.dps !== undefined ? !!cols.dps : true;
-            document.getElementById("toggle-hps").checked = cols.hps !== undefined ? !!cols.hps : true;
-            document.getElementById("toggle-cures").checked = cols.cures !== undefined ? !!cols.cures : true;
-            document.getElementById("toggle-healing").checked = !!cols.healing;
-            document.getElementById("toggle-damage").checked = !!cols.damage;
+            ["dps", "hps", "cures"].forEach(k => document.getElementById(`toggle-${k}`).checked = cols[k] !== false);
+            ["healing", "damage"].forEach(k => document.getElementById(`toggle-${k}`).checked = !!cols[k]);
         } catch (e) {}
     }
 
-    updateFontIndicators();
-    updateSizeIndicators();
-    updateThemeIndicators();
+    updateIndicators("#font-style-menu .submenu-item", "data-font", savedFont || "Segoe UI, sans-serif");
+    updateIndicators("#font-size-menu .submenu-item", "data-size", savedSize || "19");
+    updateIndicators("#themes-menu .submenu-item[data-theme]", "data-theme", savedTheme);
     applyColumnVisibility();
-    updateRowLimitButtons(savedRowLimit);
-    updateSortButtons();
-    updateOrderButtons();
+    updateActiveBtn("#rowlimit-buttons button", "data-rowlimit", savedRowLimit);
+    updateControlsActiveState();
     updateSortIndicators();
+    updateBoldTrackedAvailability();
 }
 
-function applyTheme(theme) {
+const updateControlsActiveState = () => {
+    updateActiveBtn("#sortby-buttons button", "data-sort", sortBy);
+    updateActiveBtn("#sortorder-buttons button", "data-order", sortOrder);
+};
+
+const updateBoldTrackedAvailability = () => {
+    document.getElementById("bold-tracked-container").classList.toggle("disabled", !enableTripleClick);
+    document.getElementById("toggle-bold-tracked").disabled = !enableTripleClick;
+};
+
+const applyTheme = theme => {
     currentTheme = theme;
-    document.body.classList.remove("theme-dark","theme-light","theme-terminal","theme-highcontrast");
-    document.body.classList.add("theme-" + theme);
+    document.body.className = "theme-" + theme;
     localStorage.setItem("overlayTheme", theme);
     updateColors();
-    updateThemeIndicators();
-}
+    updateIndicators("#themes-menu .submenu-item[data-theme]", "data-theme", theme);
+};
 
-function updateThemeIndicators() {
-    const activeTheme = localStorage.getItem("overlayTheme") || "dark";
-    document.querySelectorAll("#themes-menu .submenu-item[data-theme]").forEach(item => {
-        const theme = item.getAttribute("data-theme");
-        const mark = item.querySelector(".checkmark");
-        mark.textContent = (theme === activeTheme) ? "✓" : "";
+const applyColumnOrder = () => {
+    const tHead = document.querySelector("#main-table thead tr");
+    const tFoot = document.querySelector("#main-table tfoot tr");
+    columnOrder.forEach(col => {
+        tHead.appendChild(tHead.querySelector(`th[data-col="${col}"]`));
+        tFoot.appendChild(tFoot.querySelector(`td[data-col="${col}"]`));
     });
-}
+};
 
-function updateFontIndicators() {
-    const currentFont = localStorage.getItem("overlayFontFamily") || "Segoe UI, sans-serif";
-    document.querySelectorAll("#font-style-menu .submenu-item").forEach(item => {
-        const font = item.getAttribute("data-font");
-        const mark = item.querySelector(".checkmark");
-        mark.textContent = (font === currentFont) ? "✓" : "";
-    });
-}
-
-function updateSizeIndicators() {
-    const currentSize = localStorage.getItem("overlayFontSize") || "19";
-    document.querySelectorAll("#font-size-menu .submenu-item").forEach(item => {
-        const size = item.getAttribute("data-size");
-        const mark = item.querySelector(".checkmark");
-        mark.textContent = (size === currentSize) ? "✓" : "";
-    });
-}
-
-function applyColumnVisibility() {
-    const showDps = document.getElementById("toggle-dps").checked;
-    const showHps = document.getElementById("toggle-hps").checked;
-    const showCures = document.getElementById("toggle-cures").checked;
-    const showHealing = document.getElementById("toggle-healing").checked;
-    const showDamage = document.getElementById("toggle-damage").checked;
-    
-    const cols = { dps: showDps, hps: showHps, cures: showCures, healing: showHealing, damage: showDamage };
-    localStorage.setItem("overlayColumns", JSON.stringify(cols));
-    
+const applyColumnVisibility = () => {
+    const states = {};
     const mainTable = document.getElementById("main-table");
-    const totalsTable = document.getElementById("totals-table");
+    
+    ["dps", "hps", "cures", "healing", "damage"].forEach(col => {
+        const checked = document.getElementById(`toggle-${col}`).checked;
+        states[col] = checked;
+        mainTable.classList.toggle(`hide-${col}`, !checked);
+    });
 
-    mainTable.classList.toggle("hide-dps", !showDps);
-    totalsTable.classList.toggle("hide-dps", !showDps);
+    localStorage.setItem("overlayColumns", JSON.stringify(states));
+    document.querySelectorAll("#main-table th, #main-table td").forEach(el => el.style.width = "");
 
-    mainTable.classList.toggle("hide-hps", !showHps);
-    totalsTable.classList.toggle("hide-hps", !showHps);
+    ["healing", "damage"].forEach(col => {
+        const active = states[col];
+        document.getElementById(`short-${col}-container`).classList.toggle("disabled", !active);
+        document.getElementById(`toggle-short-${col}`).disabled = !active;
+    });
 
-    mainTable.classList.toggle("hide-cures", !showCures);
-    totalsTable.classList.toggle("hide-cures", !showCures);
+    updateSortButtonAvailability(states);
+};
 
-    mainTable.classList.toggle("hide-healing", !showHealing);
-    totalsTable.classList.toggle("hide-healing", !showHealing);
-
-    mainTable.classList.toggle("hide-damage", !showDamage);
-    totalsTable.classList.toggle("hide-damage", !showDamage);
-
-    // Update dependency status for short healing values
-    const shortHealingContainer = document.getElementById("short-healing-container");
-    const shortHealingCheckbox = document.getElementById("toggle-short-healing");
-    if (showHealing) {
-        shortHealingContainer.classList.remove("disabled");
-        shortHealingCheckbox.disabled = false;
-    } else {
-        shortHealingContainer.classList.add("disabled");
-        shortHealingCheckbox.disabled = true;
-    }
-
-    // Update dependency status for short damage values
-    const shortDamageContainer = document.getElementById("short-damage-container");
-    const shortDamageCheckbox = document.getElementById("toggle-short-damage");
-    if (showDamage) {
-        shortDamageContainer.classList.remove("disabled");
-        shortDamageCheckbox.disabled = false;
-    } else {
-        shortDamageContainer.classList.add("disabled");
-        shortDamageCheckbox.disabled = true;
-    }
-
-    updateSortButtonAvailability(showDps, showHps, showCures, showHealing, showDamage);
-}
-
-function updateSortButtonAvailability(showDps, showHps, showCures, showHealing, showDamage) {
-    const dpsBtn = document.querySelector('#sortby-buttons button[data-sort="dps"]');
-    const hpsBtn = document.querySelector('#sortby-buttons button[data-sort="hps"]');
-    const curesBtn = document.querySelector('#sortby-buttons button[data-sort="cures"]');
-    const healingBtn = document.querySelector('#sortby-buttons button[data-sort="healing"]');
-    const damageBtn = document.querySelector('#sortby-buttons button[data-sort="damage"]');
-
-    if (dpsBtn) dpsBtn.disabled = !showDps;
-    if (hpsBtn) hpsBtn.disabled = !showHps;
-    if (curesBtn) curesBtn.disabled = !showCures;
-    if (healingBtn) healingBtn.disabled = !showHealing;
-    if (damageBtn) damageBtn.disabled = !showDamage;
-
-    let currentSortHidden = (sortBy === "dps" && !showDps) ||
-                            (sortBy === "hps" && !showHps) ||
-                            (sortBy === "cures" && !showCures) ||
-                            (sortBy === "healing" && !showHealing) ||
-                            (sortBy === "damage" && !showDamage);
-
-    if (currentSortHidden) {
-        if (showDps) {
-            sortBy = "dps";
+const updateSortButtonAvailability = states => {
+    let currentSortHidden = sortBy !== "name" && !states[sortBy];
+    document.querySelectorAll("#sortby-buttons button").forEach(btn => {
+        const s = btn.getAttribute("data-sort");
+        btn.disabled = s !== "name" && !states[s];
+        if (currentSortHidden && !btn.disabled && !currentSortHiddenSet) {
+            sortBy = s;
             sortOrder = "desc";
-        } else if (showHps) {
-            sortBy = "hps";
-            sortOrder = "desc";
-        } else if (showCures) {
-            sortBy = "cures";
-            sortOrder = "desc";
-        } else if (showHealing) {
-            sortBy = "healing";
-            sortOrder = "desc";
-        } else if (showDamage) {
-            sortBy = "damage";
-            sortOrder = "desc";
-        } else {
-            sortBy = "name";
-            sortOrder = "asc";
+            currentSortHiddenSet = true;
         }
+    });
+    let currentSortHiddenSet = false;
+    if (currentSortHidden) {
+        const firstValid = ["dps", "hps", "cures", "healing", "damage"].find(s => states[s]) || "name";
+        sortBy = firstValid;
+        sortOrder = firstValid === "name" ? "asc" : "desc";
         localStorage.setItem("overlaySort", sortBy);
         localStorage.setItem("overlayOrder", sortOrder);
-        updateSortButtons();
-        updateOrderButtons();
+        updateControlsActiveState();
         updateSortIndicators();
     }
-}
+};
 
-function formatNumber(val, isShort) {
-    const num = parseFloat(val) || 0;
-    if (isShort) {
-        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
-        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
-        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
-    }
-    return Math.round(num).toLocaleString();
-}
-
-function getClassIcon(combatant) {
-    const job = (combatant.type || combatant.Job || combatant.class || "").toLowerCase().trim();
-    const normalized = job.replace(/[^a-z0-9]/g, "");
-    if (!normalized) return "";
-    return `images/classes/${normalized}.png`;
-}
+const updateSortIndicators = () => {
+    document.querySelectorAll("th[data-col]").forEach(th => {
+        const indicator = th.querySelector(".sort-indicator");
+        if (indicator) indicator.textContent = th.getAttribute("data-col") === sortBy ? (sortOrder === "asc" ? "▴" : "▾") : "";
+    });
+};
 
 document.addEventListener("DOMContentLoaded", () => {
     loadSettings();
-    addOverlayListener("CombatData", (e) => updateData(e));
+    addOverlayListener("CombatData", e => updateData(e));
     startOverlayEvents();
     setupMenu();
     setupColumnResize();
+    setupColumnDragDrop();
     setupHeaderSorting();
     setupControls();
+    setupNameTripleClick();
 });
 
 function updateData(data) {
-    if (data) {
-        lastCombatData = data;
-    } else if (lastCombatData) {
-        data = lastCombatData;
-    } else {
-        return;
-    }
+    if (data) lastCombatData = data;
+    else if (!lastCombatData) return;
+    else data = lastCombatData;
 
     document.getElementById("title").textContent = data.Encounter.title || "Combat";
     document.getElementById("duration").textContent = data.Encounter.duration || "00:00";
 
     const combatants = data.Combatant;
-    const tbody = document.getElementById("rows");
-
-    let sorted = Object.keys(combatants).map(key => combatants[key]);
-
-    sorted.sort((a, b) => {
+    let sorted = Object.values(combatants).sort((a, b) => {
         if (sortBy === "name") {
-            const av = (a.name || "").toLowerCase();
-            const bv = (b.name || "").toLowerCase();
-            if (av < bv) return sortOrder === "asc" ? -1 : 1;
-            if (av > bv) return sortOrder === "asc" ? 1 : -1;
+            const av = (a.name || "").toLowerCase(), bv = (b.name || "").toLowerCase();
+            return av < bv ? (sortOrder === "asc" ? -1 : 1) : av > bv ? (sortOrder === "asc" ? 1 : -1) : 0;
+        }
+        const getVal = x => {
+            if (sortBy === "dps") return parseFloat(x.encdps || 0);
+            if (sortBy === "hps") return parseFloat(x.enchps || 0);
+            if (sortBy === "cures") return parseFloat(x.cures || 0);
+            if (sortBy === "healing") return parseFloat(x.healed || x.HEALED || x.heals || x.healing || x.HEALS || 0);
+            if (sortBy === "damage") return parseFloat(x.damage || x.DAMAGE || 0);
             return 0;
-        }
-
-        let av = 0, bv = 0;
-        if (sortBy === "dps") {
-            av = parseFloat(a.encdps || 0);
-            bv = parseFloat(b.encdps || 0);
-        } else if (sortBy === "hps") {
-            av = parseFloat(a.enchps || 0);
-            bv = parseFloat(b.enchps || 0);
-        } else if (sortBy === "cures") {
-            av = parseFloat(a.cures || 0);
-            bv = parseFloat(b.cures || 0);
-        } else if (sortBy === "healing") {
-            av = parseFloat(a.healed || a.HEALED || a.heals || a.healing || a.HEALS || 0);
-            bv = parseFloat(b.healed || b.HEALED || b.heals || b.healing || b.HEALS || 0);
-        } else if (sortBy === "damage") {
-            av = parseFloat(a.damage || a.DAMAGE || 0);
-            bv = parseFloat(b.damage || b.DAMAGE || 0);
-        }
-        return sortOrder === "asc" ? av - bv : bv - av;
+        };
+        return sortOrder === "asc" ? getVal(a) - getVal(b) : getVal(b) - getVal(a);
     });
 
-    let totalDPS = 0, totalHPS = 0, totalCures = 0, totalHealing = 0, totalDamage = 0;
-    let rank = 1;
+    let totals = [0, 0, 0, 0, 0];
     let rowsHtml = "";
 
-    for (let c of sorted) {
-        if (rank > rowLimit) break;
-
-        const combatantHealing = parseFloat(c.healed || c.HEALED || c.heals || c.healing || c.HEALS || 0);
-
-        totalDPS += Math.round(parseFloat(c.encdps || 0));
-        totalHPS += Math.round(parseFloat(c.enchps || 0));
-        totalCures += Math.round(parseFloat(c.cures || 0));
-        totalHealing += Math.round(combatantHealing);
-        totalDamage += Math.round(parseFloat(c.damage || c.DAMAGE || 0));
+    sorted.slice(0, rowLimit).forEach((c, idx) => {
+        const heal = parseFloat(c.healed || c.HEALED || c.heals || c.healing || c.HEALS || 0);
+        const dmg = parseFloat(c.damage || c.DAMAGE || 0);
+        totals[0] += Math.round(parseFloat(c.encdps || 0));
+        totals[1] += Math.round(parseFloat(c.enchps || 0));
+        totals[2] += Math.round(parseFloat(c.cures || 0));
+        totals[3] += Math.round(heal);
+        totals[4] += Math.round(dmg);
 
         const iconPath = getClassIcon(c);
-        const iconHtml = iconPath ? `<img class="class-icon" src="${iconPath}" alt="${c.type || ''}" onerror="this.style.display='none'">` : '';
+        const iconHtml = iconPath ? `<img class="class-icon" src="${iconPath}" alt="" onerror="this.style.display='none'">` : '';
 
-        rowsHtml += `<tr>
-            <td class="name" data-col="name">${iconHtml}${c.name}</td>
-            <td class="dps" data-col="dps">${formatNumber(c.encdps, false)}</td>
-            <td class="hps" data-col="hps">${formatNumber(c.enchps, false)}</td>
-            <td class="cures" data-col="cures">${formatNumber(c.cures, false)}</td>
-            <td class="healing" data-col="healing">${formatNumber(combatantHealing, useShortHealing)}</td>
-            <td class="damage" data-col="damage">${formatNumber(c.damage || c.DAMAGE || 0, useShortDamage)}</td>
-        </tr>`;
-        rank++;
-    }
+        let rowCellsHtml = "";
+        columnOrder.forEach(col => {
+            if (col === "name") rowCellsHtml += `<td class="name" data-col="name" data-name="${c.name}">${iconHtml}${c.name}</td>`;
+            else if (col === "dps") rowCellsHtml += `<td class="dps" data-col="dps">${formatNumber(c.encdps, false)}</td>`;
+            else if (col === "hps") rowCellsHtml += `<td class="hps" data-col="hps">${formatNumber(c.enchps, false)}</td>`;
+            else if (col === "cures") rowCellsHtml += `<td class="cures" data-col="cures">${formatNumber(c.cures, false)}</td>`;
+            else if (col === "healing") rowCellsHtml += `<td class="healing" data-col="healing">${formatNumber(heal, useShortHealing)}</td>`;
+            else if (col === "damage") rowCellsHtml += `<td class="damage" data-col="damage">${formatNumber(dmg, useShortDamage)}</td>`;
+        });
 
-    tbody.innerHTML = rowsHtml;
+        const isHighlighted = enableTripleClick && c.name === highlightedCombatantName;
+        const trClass = isHighlighted ? (enableBoldTracked ? ' class="highlighted-row bold-tracked"' : ' class="highlighted-row"') : '';
+        rowsHtml += `<tr${trClass}>${rowCellsHtml}</tr>`;
+    });
 
-    document.getElementById("totals-dps").textContent = formatNumber(totalDPS, false);
-    document.getElementById("totals-hps").textContent = formatNumber(totalHPS, false);
-    document.getElementById("totals-cures").textContent = formatNumber(totalCures, false);
-    document.getElementById("totals-healing").textContent = formatNumber(totalHealing, useShortHealing);
-    document.getElementById("totals-damage").textContent = formatNumber(totalDamage, useShortDamage);
+    rowsHtml += `<tr class="spacer-row" style="height: 100%;"><td colspan="6" style="padding: 0; border: none; height: 100%; pointer-events: none;"></td></tr>`;
+    document.getElementById("rows").innerHTML = rowsHtml;
+
+    ["dps", "hps", "cures"].forEach((k, i) => document.getElementById(`totals-${k}`).textContent = formatNumber(totals[i], false));
+    document.getElementById("totals-healing").textContent = formatNumber(totals[3], useShortHealing);
+    document.getElementById("totals-damage").textContent = formatNumber(totals[4], useShortDamage);
 
     applyColumnVisibility();
     updateSortIndicators();
 }
 
+function setupNameTripleClick() {
+    document.getElementById("rows").addEventListener("click", e => {
+        if (!enableTripleClick || e.detail !== 3) return;
+        const td = e.target.closest("td.name");
+        if (!td) return;
+        const name = td.getAttribute("data-name");
+        if (name) {
+            highlightedCombatantName = highlightedCombatantName === name ? null : name;
+            if (highlightedCombatantName) {
+                localStorage.setItem("overlayHighlightedCombatant", highlightedCombatantName);
+            } else {
+                localStorage.removeItem("overlayHighlightedCombatant");
+            }
+            if (lastCombatData) updateData(lastCombatData);
+        }
+    });
+}
+
 function setupColumnResize() {
     let dragging = false, startX = 0, startWidth = 0, currentCol = null;
-
     document.querySelectorAll(".col-resize").forEach(handle => {
         handle.addEventListener("mousedown", e => {
             e.preventDefault();
             dragging = true;
-            const th = handle.parentElement;
-            currentCol = th.getAttribute("data-col");
+            currentCol = handle.parentElement.getAttribute("data-col");
             startX = e.clientX;
-            startWidth = th.getBoundingClientRect().width;
+            startWidth = handle.parentElement.getBoundingClientRect().width;
             document.body.style.cursor = "col-resize";
         });
     });
-
     document.addEventListener("mousemove", e => {
         if (!dragging || !currentCol) return;
+        const newWidth = Math.max(40, startWidth + (e.clientX - startX));
+        document.querySelectorAll(`[data-col="${currentCol}"]`).forEach(el => el.style.width = newWidth + "px");
+    });
+    document.addEventListener("mouseup", () => {
+        if (dragging) { dragging = false; currentCol = null; document.body.style.cursor = ""; }
+    });
+}
 
-        const dx = e.clientX - startX;
-        let newWidthPx = Math.max(40, startWidth + dx);
-
-        document.querySelectorAll(`[data-col="${currentCol}"]`).forEach(el => {
-            el.style.width = newWidthPx + "px";
+function setupColumnDragDrop() {
+    let isDragging = false, startX = 0, draggedTh = null;
+    document.querySelectorAll("th[data-col]").forEach(th => {
+        th.addEventListener("mousedown", e => {
+            if (e.target.classList.contains("col-resize")) return;
+            isDragging = false; startX = e.clientX; draggedTh = th;
         });
     });
-
+    document.addEventListener("mousemove", e => {
+        if (!draggedTh) return;
+        if (!isDragging && Math.abs(e.clientX - startX) > 6) { isDragging = true; wasDragging = true; draggedTh.classList.add("dragging"); }
+        if (isDragging) {
+            const targetTh = Array.from(document.querySelectorAll("#main-table thead th")).find(th => {
+                const r = th.getBoundingClientRect();
+                return e.clientX >= r.left && e.clientX <= r.right && th !== draggedTh;
+            });
+            if (targetTh) {
+                const fIdx = columnOrder.indexOf(draggedTh.getAttribute("data-col"));
+                const tIdx = columnOrder.indexOf(targetTh.getAttribute("data-col"));
+                if (fIdx !== -1 && tIdx !== -1) {
+                    columnOrder.splice(fIdx, 1);
+                    columnOrder.splice(tIdx, 0, draggedTh.getAttribute("data-col"));
+                    applyColumnOrder();
+                }
+            }
+        }
+    });
     document.addEventListener("mouseup", () => {
-        if (dragging) {
-            dragging = false;
-            currentCol = null;
-            document.body.style.cursor = "";
+        if (draggedTh) {
+            draggedTh.classList.remove("dragging");
+            if (isDragging) {
+                localStorage.setItem("overlayColumnOrder", JSON.stringify(columnOrder));
+                if (lastCombatData) updateData(lastCombatData);
+                setTimeout(() => wasDragging = false, 50);
+            } else wasDragging = false;
+            draggedTh = null; isDragging = false;
         }
     });
 }
@@ -817,27 +708,16 @@ function setupColumnResize() {
 function setupHeaderSorting() {
     document.querySelectorAll("th[data-col]").forEach(th => {
         th.addEventListener("click", e => {
-            if (e.target.classList.contains("col-resize")) return;
+            if (e.target.classList.contains("col-resize") || wasDragging) return;
             const col = th.getAttribute("data-col");
-            if (["name", "dps", "hps", "cures", "healing", "damage"].includes(col)) {
-                if (col !== "name") {
-                    const checkbox = document.getElementById("toggle-" + col);
-                    if (checkbox && (checkbox.disabled || !checkbox.checked)) return;
-                }
-
-                if (sortBy === col) {
-                    sortOrder = sortOrder === "asc" ? "desc" : "asc";
-                } else {
-                    sortBy = col;
-                    sortOrder = (col === "name") ? "asc" : "desc";
-                }
-                localStorage.setItem("overlaySort", sortBy);
-                localStorage.setItem("overlayOrder", sortOrder);
-                updateSortButtons();
-                updateOrderButtons();
-                updateSortIndicators();
-                if (lastCombatData) updateData(lastCombatData);
-            }
+            if (col !== "name" && (document.getElementById(`toggle-${col}`).disabled || !document.getElementById(`toggle-${col}`).checked)) return;
+            sortOrder = sortBy === col ? (sortOrder === "asc" ? "desc" : "asc") : (col === "name" ? "asc" : "desc");
+            sortBy = col;
+            localStorage.setItem("overlaySort", sortBy);
+            localStorage.setItem("overlayOrder", sortOrder);
+            updateControlsActiveState();
+            updateSortIndicators();
+            if (lastCombatData) updateData(lastCombatData);
         });
     });
 }
@@ -845,77 +725,39 @@ function setupHeaderSorting() {
 function setupMenu() {
     const menuButton = document.getElementById("menu-button");
     const menu = document.getElementById("menu");
+    const sections = [
+        { t: "font-style-toggle", m: "font-style-menu", a: "font-style-arrow" },
+        { t: "font-size-toggle", m: "font-size-menu", a: "font-size-arrow" },
+        { t: "themes-toggle", m: "themes-menu", a: "themes-arrow" },
+        { t: "transparency-toggle", m: "transparency-menu", a: "transparency-arrow" },
+        { t: "data-toggle", m: "data-menu", a: "data-arrow" }
+    ];
 
-    const fontStyleToggle = document.getElementById("font-style-toggle");
-    const fontSizeToggle = document.getElementById("font-size-toggle");
-    const themesToggle = document.getElementById("themes-toggle");
-    const dataToggle = document.getElementById("data-toggle");
-
-    const fontStyleMenu = document.getElementById("font-style-menu");
-    const fontSizeMenu = document.getElementById("font-size-menu");
-    const themesMenu = document.getElementById("themes-menu");
-    const dataMenu = document.getElementById("data-menu");
-
-    const fontStyleArrow = document.getElementById("font-style-arrow");
-    const fontSizeArrow = document.getElementById("font-size-arrow");
-    const themesArrow = document.getElementById("themes-arrow");
-    const dataArrow = document.getElementById("data-arrow");
-
-    function closeAllSubmenus() {
-        fontStyleMenu.style.display = "none";
-        fontSizeMenu.style.display = "none";
-        themesMenu.style.display = "none";
-        dataMenu.style.display = "none";
-        fontStyleArrow.textContent = "▸";
-        fontSizeArrow.textContent = "▸";
-        themesArrow.textContent = "▸";
-        dataArrow.textContent = "▸";
-    }
+    const closeAll = () => sections.forEach(s => {
+        document.getElementById(s.m).style.display = "none";
+        document.getElementById(s.a).textContent = "▸";
+    });
 
     menuButton.addEventListener("click", e => {
         e.stopPropagation();
         const visible = menu.style.display === "flex";
         menu.style.display = visible ? "none" : "flex";
-        if (!visible) closeAllSubmenus();
+        if (!visible) closeAll();
     });
 
-    fontStyleToggle.addEventListener("click", e => {
-        e.stopPropagation();
-        const visible = fontStyleMenu.style.display === "flex";
-        closeAllSubmenus();
-        fontStyleMenu.style.display = visible ? "none" : "flex";
-        fontStyleArrow.textContent = visible ? "▸" : "▾";
-    });
-
-    fontSizeToggle.addEventListener("click", e => {
-        e.stopPropagation();
-        const visible = fontSizeMenu.style.display === "flex";
-        closeAllSubmenus();
-        fontSizeMenu.style.display = visible ? "none" : "flex";
-        fontSizeArrow.textContent = visible ? "▸" : "▾";
-    });
-
-    themesToggle.addEventListener("click", e => {
-        e.stopPropagation();
-        const visible = themesMenu.style.display === "flex";
-        closeAllSubmenus();
-        themesMenu.style.display = visible ? "none" : "flex";
-        themesArrow.textContent = visible ? "▸" : "▾";
-    });
-
-    dataToggle.addEventListener("click", e => {
-        e.stopPropagation();
-        const visible = dataMenu.style.display === "flex";
-        closeAllSubmenus();
-        dataMenu.style.display = visible ? "none" : "flex";
-        dataArrow.textContent = visible ? "▸" : "▾";
+    sections.forEach(s => {
+        document.getElementById(s.t).addEventListener("click", e => {
+            e.stopPropagation();
+            const mEl = document.getElementById(s.m);
+            const visible = mEl.style.display === "flex";
+            closeAll();
+            mEl.style.display = visible ? "none" : "flex";
+            document.getElementById(s.a).textContent = visible ? "▸" : "▾";
+        });
     });
 
     document.addEventListener("click", e => {
-        if (!menu.contains(e.target) && e.target !== menuButton) {
-            menu.style.display = "none";
-            closeAllSubmenus();
-        }
+        if (!menu.contains(e.target) && e.target !== menuButton) { menu.style.display = "none"; closeAll(); }
     });
 }
 
@@ -925,8 +767,7 @@ function setupControls() {
             const font = item.getAttribute("data-font");
             document.body.style.fontFamily = font;
             localStorage.setItem("overlayFontFamily", font);
-            updateFontIndicators();
-            document.getElementById("menu").style.display = "none";
+            updateIndicators("#font-style-menu .submenu-item", "data-font", font);
         });
     });
 
@@ -935,51 +776,57 @@ function setupControls() {
             const size = item.getAttribute("data-size");
             document.body.style.fontSize = size + "px";
             localStorage.setItem("overlayFontSize", size);
-            updateSizeIndicators();
-            document.getElementById("menu").style.display = "none";
+            updateIndicators("#font-size-menu .submenu-item", "data-size", size);
         });
     });
 
     document.querySelectorAll("#themes-menu .submenu-item[data-theme]").forEach(item => {
-        item.addEventListener("click", () => {
-            const theme = item.getAttribute("data-theme");
-            applyTheme(theme);
-            document.getElementById("menu").style.display = "none";
-        });
+        item.addEventListener("click", () => applyTheme(item.getAttribute("data-theme")));
     });
 
     document.querySelectorAll("#transparency-buttons button").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const val = btn.getAttribute("data-trans");
-            applyTransparency(val);
-        });
+        btn.addEventListener("click", () => applyTransparency(btn.getAttribute("data-trans")));
     });
 
     document.querySelectorAll("#rowlimit-buttons button").forEach(btn => {
         btn.addEventListener("click", () => {
-            const val = btn.getAttribute("data-rowlimit");
-            rowLimit = parseInt(val, 10) || 24;
-            localStorage.setItem("overlayRowLimit", val);
-            updateRowLimitButtons(val);
+            rowLimit = parseInt(btn.getAttribute("data-rowlimit"), 10) || 24;
+            localStorage.setItem("overlayRowLimit", rowLimit);
+            updateActiveBtn("#rowlimit-buttons button", "data-rowlimit", rowLimit);
             if (lastCombatData) updateData(lastCombatData);
         });
     });
 
-    document.getElementById("toggle-dps").addEventListener("change", applyColumnVisibility);
-    document.getElementById("toggle-hps").addEventListener("change", applyColumnVisibility);
-    document.getElementById("toggle-cures").addEventListener("change", applyColumnVisibility);
-    document.getElementById("toggle-healing").addEventListener("change", applyColumnVisibility);
-    document.getElementById("toggle-damage").addEventListener("change", applyColumnVisibility);
+    ["dps", "hps", "cures", "healing", "damage"].forEach(col => {
+        document.getElementById(`toggle-${col}`).addEventListener("change", applyColumnVisibility);
+    });
 
-    document.getElementById("toggle-short-healing").addEventListener("change", (e) => {
+    document.getElementById("toggle-short-healing").addEventListener("change", e => {
         useShortHealing = e.target.checked;
         localStorage.setItem("overlayShortHealing", useShortHealing);
         if (lastCombatData) updateData(lastCombatData);
     });
 
-    document.getElementById("toggle-short-damage").addEventListener("change", (e) => {
+    document.getElementById("toggle-short-damage").addEventListener("change", e => {
         useShortDamage = e.target.checked;
         localStorage.setItem("overlayShortDamage", useShortDamage);
+        if (lastCombatData) updateData(lastCombatData);
+    });
+
+    document.getElementById("toggle-triple-click").addEventListener("change", e => {
+        enableTripleClick = e.target.checked;
+        localStorage.setItem("overlayEnableTripleClick", enableTripleClick);
+        if (!enableTripleClick) {
+            highlightedCombatantName = null;
+            localStorage.removeItem("overlayHighlightedCombatant");
+        }
+        updateBoldTrackedAvailability();
+        if (lastCombatData) updateData(lastCombatData);
+    });
+
+    document.getElementById("toggle-bold-tracked").addEventListener("change", e => {
+        enableBoldTracked = e.target.checked;
+        localStorage.setItem("overlayBoldTracked", enableBoldTracked);
         if (lastCombatData) updateData(lastCombatData);
     });
 
@@ -987,11 +834,10 @@ function setupControls() {
         btn.addEventListener("click", () => {
             if (btn.disabled) return;
             sortBy = btn.getAttribute("data-sort");
-            sortOrder = (sortBy === "name") ? "asc" : "desc";
+            sortOrder = sortBy === "name" ? "asc" : "desc";
             localStorage.setItem("overlaySort", sortBy);
             localStorage.setItem("overlayOrder", sortOrder);
-            updateSortButtons();
-            updateOrderButtons();
+            updateControlsActiveState();
             updateSortIndicators();
             if (lastCombatData) updateData(lastCombatData);
         });
@@ -1001,7 +847,7 @@ function setupControls() {
         btn.addEventListener("click", () => {
             sortOrder = btn.getAttribute("data-order");
             localStorage.setItem("overlayOrder", sortOrder);
-            updateOrderButtons();
+            updateControlsActiveState();
             updateSortIndicators();
             if (lastCombatData) updateData(lastCombatData);
         });
