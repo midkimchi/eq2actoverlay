@@ -218,6 +218,12 @@ th.hps    { text-align: center; }
 th.cures  { text-align: center; }
 th.damage { text-align: center; }
 
+.sort-indicator {
+    font-size: 0.85em;
+    margin-left: 4px;
+    display: inline-block;
+}
+
 /* CSS-driven column hiding for high performance */
 table.hide-dps .dps, table.hide-dps th.dps { display: none !important; }
 table.hide-hps .hps, table.hide-hps th.hps { display: none !important; }
@@ -335,6 +341,7 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
             <!-- Sort By -->
             <div class="submenu-item"><span>Sort By</span></div>
             <div class="submenu-buttons" id="sortby-buttons">
+                <button data-sort="name">Name</button>
                 <button data-sort="dps">DPS</button>
                 <button data-sort="hps">HPS</button>
                 <button data-sort="cures">Cures</button>
@@ -365,11 +372,11 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
     <table id="main-table">
         <thead>
             <tr>
-                <th class="name"   data-col="name">Name<span class="col-resize"></span></th>
-                <th class="dps"    data-col="dps">DPS<span class="col-resize"></span></th>
-                <th class="hps"    data-col="hps">HPS<span class="col-resize"></span></th>
-                <th class="cures"  data-col="cures">Cures<span class="col-resize"></span></th>
-                <th class="damage" data-col="damage">Damage<span class="col-resize"></span></th>
+                <th class="name"   data-col="name">Name<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="dps"    data-col="dps">DPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="hps"    data-col="hps">HPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="cures"  data-col="cures">Cures<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="damage" data-col="damage">Damage<span class="sort-indicator"></span><span class="col-resize"></span></th>
             </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -442,6 +449,20 @@ function updateOrderButtons() {
     });
 }
 
+function updateSortIndicators() {
+    document.querySelectorAll("th[data-col]").forEach(th => {
+        const col = th.getAttribute("data-col");
+        const indicator = th.querySelector(".sort-indicator");
+        if (!indicator) return;
+
+        if (col === sortBy) {
+            indicator.textContent = sortOrder === "asc" ? "▴" : "▾";
+        } else {
+            indicator.textContent = "";
+        }
+    });
+}
+
 function loadSettings() {
     const savedFont = localStorage.getItem("overlayFontFamily");
     const savedSize = localStorage.getItem("overlayFontSize");
@@ -483,6 +504,7 @@ function loadSettings() {
     updateRowLimitButtons(savedRowLimit);
     updateSortButtons();
     updateOrderButtons();
+    updateSortIndicators();
 }
 
 function applyTheme(theme) {
@@ -576,18 +598,28 @@ function updateSortButtonAvailability(showDps, showHps, showCures, showDamage) {
                             (sortBy === "damage" && !showDamage);
 
     if (currentSortHidden) {
-        // Priority order: DPS -> HPS -> Cures -> Damage
+        // Priority order: Name -> DPS -> HPS -> Cures -> Damage
         if (showDps) {
             sortBy = "dps";
+            sortOrder = "desc";
         } else if (showHps) {
             sortBy = "hps";
+            sortOrder = "desc";
         } else if (showCures) {
             sortBy = "cures";
+            sortOrder = "desc";
         } else if (showDamage) {
             sortBy = "damage";
+            sortOrder = "desc";
+        } else {
+            sortBy = "name";
+            sortOrder = "asc";
         }
         localStorage.setItem("overlaySort", sortBy);
+        localStorage.setItem("overlayOrder", sortOrder);
         updateSortButtons();
+        updateOrderButtons();
+        updateSortIndicators();
     }
 }
 
@@ -629,6 +661,14 @@ function updateData(data) {
     let sorted = Object.keys(combatants).map(key => combatants[key]);
 
     sorted.sort((a, b) => {
+        if (sortBy === "name") {
+            const av = (a.name || "").toLowerCase();
+            const bv = (b.name || "").toLowerCase();
+            if (av < bv) return sortOrder === "asc" ? -1 : 1;
+            if (av > bv) return sortOrder === "asc" ? 1 : -1;
+            return 0;
+        }
+
         let av = 0, bv = 0;
         if (sortBy === "dps") {
             av = parseFloat(a.encdps || 0);
@@ -676,6 +716,7 @@ function updateData(data) {
     document.getElementById("totals-damage").textContent = formatNumber(totalDamage, true);
 
     applyColumnVisibility();
+    updateSortIndicators();
 }
 
 function setupColumnResize() {
@@ -718,20 +759,23 @@ function setupHeaderSorting() {
         th.addEventListener("click", e => {
             if (e.target.classList.contains("col-resize")) return;
             const col = th.getAttribute("data-col");
-            if (["dps", "hps", "cures", "damage"].includes(col)) {
-                const checkbox = document.getElementById("toggle-" + col);
-                if (checkbox && (checkbox.disabled || !checkbox.checked)) return;
+            if (["name", "dps", "hps", "cures", "damage"].includes(col)) {
+                if (col !== "name") {
+                    const checkbox = document.getElementById("toggle-" + col);
+                    if (checkbox && (checkbox.disabled || !checkbox.checked)) return;
+                }
 
                 if (sortBy === col) {
                     sortOrder = sortOrder === "asc" ? "desc" : "asc";
                 } else {
                     sortBy = col;
-                    sortOrder = "desc";
+                    sortOrder = (col === "name") ? "asc" : "desc";
                 }
                 localStorage.setItem("overlaySort", sortBy);
                 localStorage.setItem("overlayOrder", sortOrder);
                 updateSortButtons();
                 updateOrderButtons();
+                updateSortIndicators();
                 if (lastCombatData) updateData(lastCombatData);
             }
         });
@@ -876,8 +920,12 @@ function setupControls() {
         btn.addEventListener("click", () => {
             if (btn.disabled) return;
             sortBy = btn.getAttribute("data-sort");
+            sortOrder = (sortBy === "name") ? "asc" : "desc";
             localStorage.setItem("overlaySort", sortBy);
+            localStorage.setItem("overlayOrder", sortOrder);
             updateSortButtons();
+            updateOrderButtons();
+            updateSortIndicators();
             if (lastCombatData) updateData(lastCombatData);
         });
     });
@@ -887,6 +935,7 @@ function setupControls() {
             sortOrder = btn.getAttribute("data-order");
             localStorage.setItem("overlayOrder", sortOrder);
             updateOrderButtons();
+            updateSortIndicators();
             if (lastCombatData) updateData(lastCombatData);
         });
     });
