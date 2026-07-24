@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Minimal EQ2 Parse</title>
+<!-- Google Fonts for PT Sans Narrow -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+html, body { height: 100%; margin: 0; }
+
+:root {
+    --bg: rgba(18, 18, 18, 1);
+    --menu-bg: rgba(30, 30, 30, 1);
+
+    --fg: #e0e0e0;
+    --border: #333333;
+    --row-alt: rgba(255, 255, 255, 0.03);
+    --hover: #333333;
+    --menu-border: #333333;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: Segoe UI, sans-serif;
+    font-size: 19px;
+    font-weight: bold;
+    padding: 8px 8px 0 8px;
+    position: relative;
+    overflow: hidden;
+    pointer-events: auto;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* THEMES */
+.theme-dark {
+    --fg: #e0e0e0;
+    --border: #333333;
+    --row-alt: rgba(255, 255, 255, 0.03);
+    --hover: #333333;
+    --menu-border: #333333;
+}
+.theme-light {
+    --fg: #222222;
+    --border: #cccccc;
+    --row-alt: rgba(0, 0, 0, 0.03);
+    --hover: #dddddd;
+    --menu-border: #cccccc;
+}
+.theme-terminal {
+    --fg: #00ff66;
+    --border: #00aa44;
+    --row-alt: rgba(0, 255, 102, 0.08);
+    --hover: #003322;
+    --menu-border: #00aa44;
+}
+.theme-highcontrast {
+    --fg: #ffff00;
+    --border: #ffffff;
+    --row-alt: rgba(255, 255, 0, 0.1);
+    --hover: #333300;
+    --menu-border: #ffffff;
+}
+
+/* HEADER */
+#header {
+    font-size: inherit;
+    font-weight: bold;
+    color: var(--fg);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#header-left { display: flex; align-items: center; gap: 6px; padding-left: 10px; }
+#header-right { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
+#duration { min-width: 60px; text-align: right; }
+#menu-button { font-size: 20px; cursor: pointer; user-select: none; padding: 2px 4px; }
+
+/* MAIN MENU */
+#menu {
+    position: absolute;
+    top: 36px;
+    right: 8px;
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
+    padding: 6px 0;
+    display: none;
+    flex-direction: column;
+    z-index: 999;
+    min-width: 240px;
+    max-height: 400px;
+    overflow-y: auto;
+    pointer-events: auto;
+}
+
+.menu-section { display: flex; flex-direction: column; }
+
+.menu-header {
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--fg);
+    white-space: nowrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.menu-header:hover { background-color: var(--hover); }
+
+.submenu {
+    display: none;
+    flex-direction: column;
+    background-color: var(--menu-bg);
+    border-top: 1px solid var(--menu-border);
+}
+
+.submenu-item {
+    padding: 6px 20px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--fg);
+    white-space: nowrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.submenu-item:hover { background-color: var(--hover); }
+
+.checkmark { color: #6cf; font-weight: bold; padding-left: 10px; }
+
+.submenu-buttons {
+    display: flex;
+    gap: 6px;
+    padding: 6px 20px;
+}
+.submenu-buttons button {
+    background-color: var(--menu-bg);
+    color: var(--fg);
+    border: 1px solid var(--menu-border);
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.submenu-buttons button:hover { background-color: var(--hover); }
+.submenu-buttons button.active {
+    background-color: var(--hover);
+    border-color: var(--fg);
+}
+
+/* TABLE */
+#table-container {
+    position: absolute;
+    top: 58px;
+    left: 14px;
+    bottom: 48px;
+    right: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    pointer-events: auto;
+}
+
+table { width: 100%; border-collapse: collapse; table-layout: fixed; pointer-events: auto; }
+
+th, td {
+    padding: 3px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: bold;
+    pointer-events: auto;
+    color: var(--fg);
+}
+
+th {
+    color: var(--fg);
+    font-size: inherit;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+}
+
+tr:nth-child(even) { background-color: var(--row-alt); }
+
+.name  { text-align: left; }
+.dps   { text-align: center; }
+.hps   { text-align: center; }
+.cures { text-align: center; }
+
+th.name  { text-align: left; }
+th.dps   { text-align: center; }
+th.hps   { text-align: center; }
+th.cures { text-align: center; }
+
+.col-resize {
+    position: absolute;
+    right: -6px;
+    top: 0;
+    width: 12px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: rgba(255,255,255,0.12);
+    border-left: 1px solid var(--border);
+    pointer-events: auto;
+}
+
+/* TOTALS */
+#totals-table {
+    position: absolute;
+    bottom: 8px;
+    left: 14px;
+    right: 8px;
+    background-color: var(--bg);
+    border-top: 1px solid var(--border);
+}
+#totals-table td {
+    padding: 3px 4px;
+    font-size: inherit;
+    font-weight: bold;
+    color: var(--fg);
+}
+</style>
+</head>
+
+<body class="theme-dark">
+
+<!-- MENU -->
+<div id="menu">
+
+    <!-- Font Style -->
+    <div class="menu-section">
+        <div id="font-style-toggle" class="menu-header">
+            <span>Font Style</span><span id="font-style-arrow">▸</span>
+        </div>
+        <div id="font-style-menu" class="submenu">
+            <div class="submenu-item" data-font="Segoe UI, sans-serif"><span style="font-family: 'Segoe UI', sans-serif;">Segoe UI</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-font="Roboto, sans-serif"><span style="font-family: 'Roboto', sans-serif;">Roboto</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-font="'PT Sans Narrow', sans-serif"><span style="font-family: 'PT Sans Narrow', sans-serif;">PT Sans Narrow</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-font="Arial, sans-serif"><span style="font-family: 'Arial', sans-serif;">Arial</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-font="Georgia, serif"><span style="font-family: 'Georgia', serif;">Georgia</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-font="Courier New, monospace"><span style="font-family: 'Courier New', monospace;">Courier New</span><span class="checkmark"></span></div>
+        </div>
+    </div>
+
+    <!-- Font Size -->
+    <div class="menu-section">
+        <div id="font-size-toggle" class="menu-header">
+            <span>Font Size</span><span id="font-size-arrow">▸</span>
+        </div>
+        <div id="font-size-menu" class="submenu">
+            <div class="submenu-item" data-size="13"><span>13</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-size="15"><span>15</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-size="17"><span>17</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-size="19"><span>19</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-size="21"><span>21</span><span class="checkmark"></span></div>
+        </div>
+    </div>
+
+    <!-- Themes -->
+    <div class="menu-section">
+        <div id="themes-toggle" class="menu-header">
+            <span>Themes</span><span id="themes-arrow">▸</span>
+        </div>
+        <div id="themes-menu" class="submenu">
+            <!-- Themes -->
+            <div class="submenu-item" data-theme="dark"><span>Theme: Dark</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="light"><span>Theme: Light</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="terminal"><span>Theme: Terminal Green</span><span class="checkmark"></span></div>
+            <div class="submenu-item" data-theme="highcontrast"><span>Theme: High Contrast</span><span class="checkmark"></span></div>
+
+            <!-- Transparency -->
+            <div class="submenu-item"><span>Transparency</span></div>
+            <div class="submenu-buttons" id="transparency-buttons">
+                <button data-trans="0.25">25%</button>
+                <button data-trans="0.50">50%</button>
+                <button data-trans="0.75">75%</button>
+                <button data-trans="1.00">100%</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data -->
+    <div class="menu-section">
+        <div id="data-toggle" class="menu-header">
+            <span>Data</span><span id="data-arrow">▸</span>
+        </div>
+        <div id="data-menu" class="submenu">
+            <!-- Row Limit -->
+            <div class="submenu-item"><span>Row Limit</span></div>
+            <div class="submenu-buttons" id="rowlimit-buttons">
+                <button data-rowlimit="6">6</button>
+                <button data-rowlimit="12">12</button>
+                <button data-rowlimit="24">24</button>
+            </div>
+
+            <!-- Column toggles -->
+            <div class="submenu-item"><span>Show DPS</span><input id="toggle-dps" type="checkbox" checked></div>
+            <div class="submenu-item"><span>Show HPS</span><input id="toggle-hps" type="checkbox" checked></div>
+            <div class="submenu-item"><span>Show Cures</span><input id="toggle-cures" type="checkbox" checked></div>
+
+            <!-- Sort By -->
+            <div class="submenu-item"><span>Sort By</span></div>
+            <div class="submenu-buttons" id="sortby-buttons">
+                <button data-sort="dps">DPS</button>
+                <button data-sort="hps">HPS</button>
+                <button data-sort="cures">Cures</button>
+            </div>
+
+            <!-- Sort Order -->
+            <div class="submenu-item"><span>Sort Order</span></div>
+            <div class="submenu-buttons" id="sortorder-buttons">
+                <button data-order="asc">Asc</button>
+                <button data-order="desc">Desc</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+    <div id="header-left"><span id="title">Waiting for combat...</span></div>
+    <div id="header-right">
+        <span id="duration">00:00</span>
+        <div id="menu-button">⚙️</div>
+    </div>
+</div>
+
+<!-- TABLE -->
+<div id="table-container">
+    <table id="main-table">
+        <thead>
+            <tr>
+                <th class="name"  data-col="name">Name<span class="col-resize"></span></th>
+                <th class="dps"   data-col="dps">DPS<span class="col-resize"></span></th>
+                <th class="hps"   data-col="hps">HPS<span class="col-resize"></span></th>
+                <th class="cures" data-col="cures">Cures<span class="col-resize"></span></th>
+            </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+    </table>
+</div>
+
+<!-- TOTALS -->
+<table id="totals-table">
+    <tr>
+        <td id="totals-name"  class="name"  data-col="name">Total:</td>
+        <td id="totals-dps"   class="dps"   data-col="dps">0</td>
+        <td id="totals-hps"   class="hps"   data-col="hps">0</td>
+        <td id="totals-cures" class="cures" data-col="cures">0</td>
+    </tr>
+</table>
+
+<script src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
+
+<script>
+/* Persistent settings */
+let rowLimit = 24;
+let sortBy = "dps";
+let sortOrder = "desc";
+let currentAlpha = 1.0;
+let currentTheme = "dark";
+
+/* JS dictates RGB background colors to ensure CEF compatibility */
+const themeColors = {
+    dark: { bg: "18, 18, 18", menu: "30, 30, 30" },
+    light: { bg: "245, 245, 245", menu: "255, 255, 255" },
+    terminal: { bg: "0, 0, 0", menu: "10, 10, 10" },
+    highcontrast: { bg: "0, 0, 0", menu: "0, 0, 0" }
+};
+
+function updateColors() {
+    const colors = themeColors[currentTheme] || themeColors.dark;
+    document.documentElement.style.setProperty("--bg", `rgba(${colors.bg}, ${currentAlpha})`);
+    document.documentElement.style.setProperty("--menu-bg", `rgba(${colors.menu}, ${currentAlpha})`);
+}
+
+function applyTransparency(val) {
+    currentAlpha = val;
+    localStorage.setItem("overlayTransparency", val);
+    updateColors();
+    updateTransparencyButtons(val);
+}
+
+function updateTransparencyButtons(val) {
+    document.querySelectorAll("#transparency-buttons button").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-trans") === String(val));
+    });
+}
+
+function updateRowLimitButtons(val) {
+    document.querySelectorAll("#rowlimit-buttons button").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-rowlimit") === String(val));
+    });
+}
+
+function updateSortButtons() {
+    document.querySelectorAll("#sortby-buttons button").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-sort") === sortBy);
+    });
+}
+
+function updateOrderButtons() {
+    document.querySelectorAll("#sortorder-buttons button").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-order") === sortOrder);
+    });
+}
+
+function loadSettings() {
+    const savedFont = localStorage.getItem("overlayFontFamily");
+    const savedSize = localStorage.getItem("overlayFontSize");
+    const savedTheme = localStorage.getItem("overlayTheme") || "dark";
+    const savedTrans = localStorage.getItem("overlayTransparency") || "1.00";
+    const savedRowLimit = localStorage.getItem("overlayRowLimit") || "24";
+    const savedColumns = localStorage.getItem("overlayColumns");
+    const savedSort = localStorage.getItem("overlaySort") || "dps";
+    const savedOrder = localStorage.getItem("overlayOrder") || "desc";
+
+    if (savedFont) document.body.style.fontFamily = savedFont;
+    if (savedSize) document.body.style.fontSize = savedSize + "px";
+
+    rowLimit = parseInt(savedRowLimit, 10) || 24;
+    sortBy = savedSort;
+    sortOrder = savedOrder;
+
+    applyTheme(savedTheme);
+    applyTransparency(savedTrans);
+
+    if (savedColumns) {
+        try {
+            const cols = JSON.parse(savedColumns);
+            document.getElementById("toggle-dps").checked = !!cols.dps;
+            document.getElementById("toggle-hps").checked = !!cols.hps;
+            document.getElementById("toggle-cures").checked = !!cols.cures;
+        } catch (e) {}
+    }
+
+    updateFontIndicators();
+    updateSizeIndicators();
+    updateThemeIndicators();
+    applyColumnVisibility();
+    updateRowLimitButtons(savedRowLimit);
+    updateSortButtons();
+    updateOrderButtons();
+}
+
+/* Themes */
+function applyTheme(theme) {
+    currentTheme = theme;
+    document.body.classList.remove("theme-dark","theme-light","theme-terminal","theme-highcontrast");
+    document.body.classList.add("theme-" + theme);
+    localStorage.setItem("overlayTheme", theme);
+    updateColors();
+    updateThemeIndicators();
+}
+
+function updateThemeIndicators() {
+    const activeTheme = localStorage.getItem("overlayTheme") || "dark";
+    document.querySelectorAll("#themes-menu .submenu-item[data-theme]").forEach(item => {
+        const theme = item.getAttribute("data-theme");
+        const mark = item.querySelector(".checkmark");
+        mark.textContent = (theme === activeTheme) ? "✓" : "";
+    });
+}
+
+function updateFontIndicators() {
+    const currentFont = localStorage.getItem("overlayFontFamily") || "Segoe UI, sans-serif";
+    document.querySelectorAll("#font-style-menu .submenu-item").forEach(item => {
+        const font = item.getAttribute("data-font");
+        const mark = item.querySelector(".checkmark");
+        mark.textContent = (font === currentFont) ? "✓" : "";
+    });
+}
+
+function updateSizeIndicators() {
+    const currentSize = localStorage.getItem("overlayFontSize") || "19";
+    document.querySelectorAll("#font-size-menu .submenu-item").forEach(item => {
+        const size = item.getAttribute("data-size");
+        const mark = item.querySelector(".checkmark");
+        mark.textContent = (size === currentSize) ? "✓" : "";
+    });
+}
+
+function applyColumnVisibility() {
+    const showDps = document.getElementById("toggle-dps").checked;
+    const showHps = document.getElementById("toggle-hps").checked;
+    const showCures = document.getElementById("toggle-cures").checked;
+    const cols = { dps: showDps, hps: showHps, cures: showCures };
+    localStorage.setItem("overlayColumns", JSON.stringify(cols));
+    toggleCol("dps", showDps);
+    toggleCol("hps", showHps);
+    toggleCol("cures", showCures);
+}
+
+function toggleCol(col, show) {
+    const display = show ? "" : "none";
+    document.querySelectorAll('[data-col="' + col + '"]').forEach(el => {
+        el.style.display = display;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadSettings();
+    addOverlayListener("CombatData", (e) => updateData(e));
+    startOverlayEvents();
+    setupMenu();
+    setupColumnResize();
+    setupControls();
+});
+
+function updateData(data) {
+    document.getElementById("title").textContent = data.Encounter.title || "Combat";
+    document.getElementById("duration").textContent = data.Encounter.duration || "00:00";
+
+    const combatants = data.Combatant;
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
+
+    let sorted = Object.keys(combatants).map(key => combatants[key]);
+
+    sorted.sort((a, b) => {
+        const key = sortBy === "dps" ? "encdps" : sortBy === "hps" ? "enchps" : "cures";
+        const av = parseFloat(a[key] || 0);
+        const bv = parseFloat(b[key] || 0);
+        return sortOrder === "asc" ? av - bv : bv - av;
+    });
+
+    let totalDPS = 0, totalHPS = 0, totalCures = 0;
+    let rank = 1;
+
+    for (let c of sorted) {
+        if (rank > rowLimit) break;
+
+        totalDPS += Math.round(parseFloat(c.encdps || 0));
+        totalHPS += Math.round(parseFloat(c.enchps || 0));
+        totalCures += Math.round(parseFloat(c.cures || 0));
+
+        let row = document.createElement("tr");
+        row.innerHTML = `
+            <td class="name" data-col="name">${c.name}</td>
+            <td class="dps" data-col="dps">${Math.round(c.encdps)}</td>
+            <td class="hps" data-col="hps">${Math.round(c.enchps)}</td>
+            <td class="cures" data-col="cures">${Math.round(c.cures)}</td>
+        `;
+        tbody.appendChild(row);
+        rank++;
+    }
+
+    document.getElementById("totals-dps").textContent = totalDPS.toLocaleString();
+    document.getElementById("totals-hps").textContent = totalHPS.toLocaleString();
+    document.getElementById("totals-cures").textContent = totalCures.toLocaleString();
+
+    applyColumnVisibility();
+}
+
+function setupColumnResize() {
+    let dragging = false, startX = 0, startWidth = 0, currentCol = null;
+
+    document.querySelectorAll(".col-resize").forEach(handle => {
+        handle.addEventListener("mousedown", e => {
+            e.preventDefault();
+            dragging = true;
+            const th = handle.parentElement;
+            currentCol = th.getAttribute("data-col");
+            startX = e.clientX;
+            startWidth = th.getBoundingClientRect().width;
+            document.body.style.cursor = "col-resize";
+        });
+    });
+
+    document.addEventListener("mousemove", e => {
+        if (!dragging || !currentCol) return;
+
+        const dx = e.clientX - startX;
+        const tableWidth = document.querySelector("table").getBoundingClientRect().width;
+        let newWidthPx = Math.max(40, startWidth + dx);
+        let newWidthPercent = (newWidthPx / tableWidth) * 100;
+    });
+
+    document.addEventListener("mouseup", () => {
+        dragging = false;
+        currentCol = null;
+        document.body.style.cursor = "";
+    });
+}
+
+function setupMenu() {
+    const menuButton = document.getElementById("menu-button");
+    const menu = document.getElementById("menu");
+
+    const fontStyleToggle = document.getElementById("font-style-toggle");
+    const fontSizeToggle = document.getElementById("font-size-toggle");
+    const themesToggle = document.getElementById("themes-toggle");
+    const dataToggle = document.getElementById("data-toggle");
+
+    const fontStyleMenu = document.getElementById("font-style-menu");
+    const fontSizeMenu = document.getElementById("font-size-menu");
+    const themesMenu = document.getElementById("themes-menu");
+    const dataMenu = document.getElementById("data-menu");
+
+    const fontStyleArrow = document.getElementById("font-style-arrow");
+    const fontSizeArrow = document.getElementById("font-size-arrow");
+    const themesArrow = document.getElementById("themes-arrow");
+    const dataArrow = document.getElementById("data-arrow");
+
+    function closeAllSubmenus() {
+        fontStyleMenu.style.display = "none";
+        fontSizeMenu.style.display = "none";
+        themesMenu.style.display = "none";
+        dataMenu.style.display = "none";
+        fontStyleArrow.textContent = "▸";
+        fontSizeArrow.textContent = "▸";
+        themesArrow.textContent = "▸";
+        dataArrow.textContent = "▸";
+    }
+
+    menuButton.addEventListener("click", e => {
+        e.stopPropagation();
+        const visible = menu.style.display === "flex";
+        menu.style.display = visible ? "none" : "flex";
+        if (!visible) closeAllSubmenus();
+    });
+
+    fontStyleToggle.addEventListener("click", e => {
+        e.stopPropagation();
+        const visible = fontStyleMenu.style.display === "flex";
+        closeAllSubmenus();
+        fontStyleMenu.style.display = visible ? "none" : "flex";
+        fontStyleArrow.textContent = visible ? "▸" : "▾";
+    });
+
+    fontSizeToggle.addEventListener("click", e => {
+        e.stopPropagation();
+        const visible = fontSizeMenu.style.display === "flex";
+        closeAllSubmenus();
+        fontSizeMenu.style.display = visible ? "none" : "flex";
+        fontSizeArrow.textContent = visible ? "▸" : "▾";
+    });
+
+    themesToggle.addEventListener("click", e => {
+        e.stopPropagation();
+        const visible = themesMenu.style.display === "flex";
+        closeAllSubmenus();
+        themesMenu.style.display = visible ? "none" : "flex";
+        themesArrow.textContent = visible ? "▸" : "▾";
+    });
+
+    dataToggle.addEventListener("click", e => {
+        e.stopPropagation();
+        const visible = dataMenu.style.display === "flex";
+        closeAllSubmenus();
+        dataMenu.style.display = visible ? "none" : "flex";
+        dataArrow.textContent = visible ? "▸" : "▾";
+    });
+
+    document.addEventListener("click", e => {
+        if (!menu.contains(e.target) && e.target !== menuButton) {
+            menu.style.display = "none";
+            closeAllSubmenus();
+        }
+    });
+}
+
+function setupControls() {
+    document.querySelectorAll("#font-style-menu .submenu-item").forEach(item => {
+        item.addEventListener("click", () => {
+            const font = item.getAttribute("data-font");
+            document.body.style.fontFamily = font;
+            localStorage.setItem("overlayFontFamily", font);
+            updateFontIndicators();
+            document.getElementById("menu").style.display = "none";
+        });
+    });
+
+    document.querySelectorAll("#font-size-menu .submenu-item").forEach(item => {
+        item.addEventListener("click", () => {
+            const size = item.getAttribute("data-size");
+            document.body.style.fontSize = size + "px";
+            localStorage.setItem("overlayFontSize", size);
+            updateSizeIndicators();
+            document.getElementById("menu").style.display = "none";
+        });
+    });
+
+    document.querySelectorAll("#themes-menu .submenu-item[data-theme]").forEach(item => {
+        item.addEventListener("click", () => {
+            const theme = item.getAttribute("data-theme");
+            applyTheme(theme);
+            document.getElementById("menu").style.display = "none";
+        });
+    });
+
+    document.querySelectorAll("#transparency-buttons button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const val = btn.getAttribute("data-trans");
+            applyTransparency(val);
+        });
+    });
+
+    document.querySelectorAll("#rowlimit-buttons button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const val = btn.getAttribute("data-rowlimit");
+            rowLimit = parseInt(val, 10) || 24;
+            localStorage.setItem("overlayRowLimit", val);
+            updateRowLimitButtons(val);
+        });
+    });
+
+    document.getElementById("toggle-dps").addEventListener("change", applyColumnVisibility);
+    document.getElementById("toggle-hps").addEventListener("change", applyColumnVisibility);
+    document.getElementById("toggle-cures").addEventListener("change", applyColumnVisibility);
+
+    document.querySelectorAll("#sortby-buttons button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            sortBy = btn.getAttribute("data-sort");
+            localStorage.setItem("overlaySort", sortBy);
+            updateSortButtons();
+        });
+    });
+
+    document.querySelectorAll("#sortorder-buttons button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            sortOrder = btn.getAttribute("data-order");
+            localStorage.setItem("overlayOrder", sortOrder);
+            updateOrderButtons();
+        });
+    });
+}
+</script>
+</body>
+</html>
