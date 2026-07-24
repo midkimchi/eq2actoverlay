@@ -94,7 +94,7 @@ body {
     flex-direction: column;
     z-index: 999;
     min-width: 240px;
-    max-height: 400px;
+    max-height: calc(100vh - 50px);
     overflow-y: auto;
     pointer-events: auto;
 }
@@ -132,10 +132,22 @@ body {
 }
 .submenu-item:hover { background-color: var(--hover); }
 
+.submenu-nested {
+    padding-left: 28px;
+    margin-left: 16px;
+    border-left: 2px solid var(--border);
+    font-size: 14px;
+}
+.submenu-nested.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 .checkmark { color: #6cf; font-weight: bold; padding-left: 10px; }
 
 .submenu-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 6px 20px;
 }
@@ -152,8 +164,12 @@ body {
     background-color: var(--hover);
     border-color: var(--fg);
 }
+.submenu-buttons button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
-/* TABLE */
+/* TABLE & COLUMN VISIBILITY HINTS */
 #table-container {
     position: absolute;
     top: 58px;
@@ -183,19 +199,28 @@ th {
     text-transform: uppercase;
     border-bottom: 1px solid var(--border);
     position: relative;
+    cursor: pointer;
 }
 
 tr:nth-child(even) { background-color: var(--row-alt); }
 
-.name  { text-align: left; }
-.dps   { text-align: center; }
-.hps   { text-align: center; }
-.cures { text-align: center; }
+.name   { text-align: left; }
+.dps    { text-align: center; }
+.hps    { text-align: center; }
+.cures  { text-align: center; }
+.damage { text-align: center; }
 
-th.name  { text-align: left; }
-th.dps   { text-align: center; }
-th.hps   { text-align: center; }
-th.cures { text-align: center; }
+th.name   { text-align: left; }
+th.dps    { text-align: center; }
+th.hps    { text-align: center; }
+th.cures  { text-align: center; }
+th.damage { text-align: center; }
+
+/* CSS-driven column hiding for high performance */
+table.hide-dps .dps, table.hide-dps th.dps { display: none !important; }
+table.hide-hps .hps, table.hide-hps th.hps { display: none !important; }
+table.hide-cures .cures, table.hide-cures th.cures { display: none !important; }
+table.hide-damage .damage, table.hide-damage th.damage { display: none !important; }
 
 .col-resize {
     position: absolute;
@@ -215,7 +240,7 @@ th.cures { text-align: center; }
     bottom: 8px;
     left: 14px;
     right: 8px;
-    background-color: var(--bg);
+    background-color: transparent;
     border-top: 1px solid var(--border);
 }
 #totals-table td {
@@ -302,6 +327,8 @@ th.cures { text-align: center; }
             <div class="submenu-item"><span>Show DPS</span><input id="toggle-dps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show HPS</span><input id="toggle-hps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show Cures</span><input id="toggle-cures" type="checkbox" checked></div>
+            <div class="submenu-item"><span>Show Damage</span><input id="toggle-damage" type="checkbox"></div>
+            <div class="submenu-item submenu-nested" id="short-damage-container"><span>Use short damage values</span><input id="toggle-short-damage" type="checkbox"></div>
 
             <!-- Sort By -->
             <div class="submenu-item"><span>Sort By</span></div>
@@ -309,6 +336,7 @@ th.cures { text-align: center; }
                 <button data-sort="dps">DPS</button>
                 <button data-sort="hps">HPS</button>
                 <button data-sort="cures">Cures</button>
+                <button data-sort="damage">Damage</button>
             </div>
 
             <!-- Sort Order -->
@@ -335,10 +363,11 @@ th.cures { text-align: center; }
     <table id="main-table">
         <thead>
             <tr>
-                <th class="name"  data-col="name">Name<span class="col-resize"></span></th>
-                <th class="dps"   data-col="dps">DPS<span class="col-resize"></span></th>
-                <th class="hps"   data-col="hps">HPS<span class="col-resize"></span></th>
-                <th class="cures" data-col="cures">Cures<span class="col-resize"></span></th>
+                <th class="name"   data-col="name">Name<span class="col-resize"></span></th>
+                <th class="dps"    data-col="dps">DPS<span class="col-resize"></span></th>
+                <th class="hps"    data-col="hps">HPS<span class="col-resize"></span></th>
+                <th class="cures"  data-col="cures">Cures<span class="col-resize"></span></th>
+                <th class="damage" data-col="damage">Damage<span class="col-resize"></span></th>
             </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -348,24 +377,25 @@ th.cures { text-align: center; }
 <!-- TOTALS -->
 <table id="totals-table">
     <tr>
-        <td id="totals-name"  class="name"  data-col="name">Total:</td>
-        <td id="totals-dps"   class="dps"   data-col="dps">0</td>
-        <td id="totals-hps"   class="hps"   data-col="hps">0</td>
-        <td id="totals-cures" class="cures" data-col="cures">0</td>
+        <td id="totals-name"   class="name"   data-col="name">Total:</td>
+        <td id="totals-dps"    class="dps"    data-col="dps">0</td>
+        <td id="totals-hps"    class="hps"    data-col="hps">0</td>
+        <td id="totals-cures"  class="cures"  data-col="cures">0</td>
+        <td id="totals-damage" class="damage" data-col="damage">0</td>
     </tr>
 </table>
 
 <script src="https://overlayplugin.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
 
 <script>
-/* Persistent settings */
 let rowLimit = 24;
 let sortBy = "dps";
 let sortOrder = "desc";
 let currentAlpha = 1.0;
 let currentTheme = "dark";
+let useShortDamage = false;
+let lastCombatData = null;
 
-/* JS dictates RGB background colors to ensure CEF compatibility */
 const themeColors = {
     dark: { bg: "18, 18, 18", menu: "30, 30, 30" },
     light: { bg: "245, 245, 245", menu: "255, 255, 255" },
@@ -419,6 +449,7 @@ function loadSettings() {
     const savedColumns = localStorage.getItem("overlayColumns");
     const savedSort = localStorage.getItem("overlaySort") || "dps";
     const savedOrder = localStorage.getItem("overlayOrder") || "desc";
+    const savedShortDamage = localStorage.getItem("overlayShortDamage") === "true";
 
     if (savedFont) document.body.style.fontFamily = savedFont;
     if (savedSize) document.body.style.fontSize = savedSize + "px";
@@ -426,6 +457,9 @@ function loadSettings() {
     rowLimit = parseInt(savedRowLimit, 10) || 24;
     sortBy = savedSort;
     sortOrder = savedOrder;
+    useShortDamage = savedShortDamage;
+
+    document.getElementById("toggle-short-damage").checked = useShortDamage;
 
     applyTheme(savedTheme);
     applyTransparency(savedTrans);
@@ -433,9 +467,10 @@ function loadSettings() {
     if (savedColumns) {
         try {
             const cols = JSON.parse(savedColumns);
-            document.getElementById("toggle-dps").checked = !!cols.dps;
-            document.getElementById("toggle-hps").checked = !!cols.hps;
-            document.getElementById("toggle-cures").checked = !!cols.cures;
+            document.getElementById("toggle-dps").checked = cols.dps !== undefined ? !!cols.dps : true;
+            document.getElementById("toggle-hps").checked = cols.hps !== undefined ? !!cols.hps : true;
+            document.getElementById("toggle-cures").checked = cols.cures !== undefined ? !!cols.cures : true;
+            document.getElementById("toggle-damage").checked = !!cols.damage;
         } catch (e) {}
     }
 
@@ -448,7 +483,6 @@ function loadSettings() {
     updateOrderButtons();
 }
 
-/* Themes */
 function applyTheme(theme) {
     currentTheme = theme;
     document.body.classList.remove("theme-dark","theme-light","theme-terminal","theme-highcontrast");
@@ -489,18 +523,80 @@ function applyColumnVisibility() {
     const showDps = document.getElementById("toggle-dps").checked;
     const showHps = document.getElementById("toggle-hps").checked;
     const showCures = document.getElementById("toggle-cures").checked;
-    const cols = { dps: showDps, hps: showHps, cures: showCures };
+    const showDamage = document.getElementById("toggle-damage").checked;
+    
+    const cols = { dps: showDps, hps: showHps, cures: showCures, damage: showDamage };
     localStorage.setItem("overlayColumns", JSON.stringify(cols));
-    toggleCol("dps", showDps);
-    toggleCol("hps", showHps);
-    toggleCol("cures", showCures);
+    
+    const mainTable = document.getElementById("main-table");
+    const totalsTable = document.getElementById("totals-table");
+
+    mainTable.classList.toggle("hide-dps", !showDps);
+    totalsTable.classList.toggle("hide-dps", !showDps);
+
+    mainTable.classList.toggle("hide-hps", !showHps);
+    totalsTable.classList.toggle("hide-hps", !showHps);
+
+    mainTable.classList.toggle("hide-cures", !showCures);
+    totalsTable.classList.toggle("hide-cures", !showCures);
+
+    mainTable.classList.toggle("hide-damage", !showDamage);
+    totalsTable.classList.toggle("hide-damage", !showDamage);
+
+    // Update dependency status for short damage values
+    const shortDamageContainer = document.getElementById("short-damage-container");
+    const shortDamageCheckbox = document.getElementById("toggle-short-damage");
+    if (showDamage) {
+        shortDamageContainer.classList.remove("disabled");
+        shortDamageCheckbox.disabled = false;
+    } else {
+        shortDamageContainer.classList.add("disabled");
+        shortDamageCheckbox.disabled = true;
+    }
+
+    updateSortButtonAvailability(showDps, showHps, showCures, showDamage);
 }
 
-function toggleCol(col, show) {
-    const display = show ? "" : "none";
-    document.querySelectorAll('[data-col="' + col + '"]').forEach(el => {
-        el.style.display = display;
-    });
+function updateSortButtonAvailability(showDps, showHps, showCures, showDamage) {
+    const dpsBtn = document.querySelector('#sortby-buttons button[data-sort="dps"]');
+    const hpsBtn = document.querySelector('#sortby-buttons button[data-sort="hps"]');
+    const curesBtn = document.querySelector('#sortby-buttons button[data-sort="cures"]');
+    const damageBtn = document.querySelector('#sortby-buttons button[data-sort="damage"]');
+
+    if (dpsBtn) dpsBtn.disabled = !showDps;
+    if (hpsBtn) hpsBtn.disabled = !showHps;
+    if (curesBtn) curesBtn.disabled = !showCures;
+    if (damageBtn) damageBtn.disabled = !showDamage;
+
+    let currentSortHidden = (sortBy === "dps" && !showDps) ||
+                            (sortBy === "hps" && !showHps) ||
+                            (sortBy === "cures" && !showCures) ||
+                            (sortBy === "damage" && !showDamage);
+
+    if (currentSortHidden) {
+        // Priority order: DPS -> HPS -> Cures -> Damage
+        if (showDps) {
+            sortBy = "dps";
+        } else if (showHps) {
+            sortBy = "hps";
+        } else if (showCures) {
+            sortBy = "cures";
+        } else if (showDamage) {
+            sortBy = "damage";
+        }
+        localStorage.setItem("overlaySort", sortBy);
+        updateSortButtons();
+    }
+}
+
+function formatNumber(val, isDamage) {
+    const num = parseFloat(val) || 0;
+    if (isDamage && useShortDamage) {
+        if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
+        if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
+        if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
+    }
+    return Math.round(num).toLocaleString();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -509,28 +605,48 @@ document.addEventListener("DOMContentLoaded", () => {
     startOverlayEvents();
     setupMenu();
     setupColumnResize();
+    setupHeaderSorting();
     setupControls();
 });
 
 function updateData(data) {
+    if (data) {
+        lastCombatData = data;
+    } else if (lastCombatData) {
+        data = lastCombatData;
+    } else {
+        return;
+    }
+
     document.getElementById("title").textContent = data.Encounter.title || "Combat";
     document.getElementById("duration").textContent = data.Encounter.duration || "00:00";
 
     const combatants = data.Combatant;
     const tbody = document.getElementById("rows");
-    tbody.innerHTML = "";
 
     let sorted = Object.keys(combatants).map(key => combatants[key]);
 
     sorted.sort((a, b) => {
-        const key = sortBy === "dps" ? "encdps" : sortBy === "hps" ? "enchps" : "cures";
-        const av = parseFloat(a[key] || 0);
-        const bv = parseFloat(b[key] || 0);
+        let av = 0, bv = 0;
+        if (sortBy === "dps") {
+            av = parseFloat(a.encdps || 0);
+            bv = parseFloat(b.encdps || 0);
+        } else if (sortBy === "hps") {
+            av = parseFloat(a.enchps || 0);
+            bv = parseFloat(b.enchps || 0);
+        } else if (sortBy === "cures") {
+            av = parseFloat(a.cures || 0);
+            bv = parseFloat(b.cures || 0);
+        } else if (sortBy === "damage") {
+            av = parseFloat(a.damage || a.DAMAGE || 0);
+            bv = parseFloat(b.damage || b.DAMAGE || 0);
+        }
         return sortOrder === "asc" ? av - bv : bv - av;
     });
 
-    let totalDPS = 0, totalHPS = 0, totalCures = 0;
+    let totalDPS = 0, totalHPS = 0, totalCures = 0, totalDamage = 0;
     let rank = 1;
+    let rowsHtml = "";
 
     for (let c of sorted) {
         if (rank > rowLimit) break;
@@ -538,21 +654,24 @@ function updateData(data) {
         totalDPS += Math.round(parseFloat(c.encdps || 0));
         totalHPS += Math.round(parseFloat(c.enchps || 0));
         totalCures += Math.round(parseFloat(c.cures || 0));
+        totalDamage += Math.round(parseFloat(c.damage || c.DAMAGE || 0));
 
-        let row = document.createElement("tr");
-        row.innerHTML = `
+        rowsHtml += `<tr>
             <td class="name" data-col="name">${c.name}</td>
-            <td class="dps" data-col="dps">${Math.round(c.encdps)}</td>
-            <td class="hps" data-col="hps">${Math.round(c.enchps)}</td>
-            <td class="cures" data-col="cures">${Math.round(c.cures)}</td>
-        `;
-        tbody.appendChild(row);
+            <td class="dps" data-col="dps">${formatNumber(c.encdps, false)}</td>
+            <td class="hps" data-col="hps">${formatNumber(c.enchps, false)}</td>
+            <td class="cures" data-col="cures">${formatNumber(c.cures, false)}</td>
+            <td class="damage" data-col="damage">${formatNumber(c.damage || c.DAMAGE || 0, true)}</td>
+        </tr>`;
         rank++;
     }
 
-    document.getElementById("totals-dps").textContent = totalDPS.toLocaleString();
-    document.getElementById("totals-hps").textContent = totalHPS.toLocaleString();
-    document.getElementById("totals-cures").textContent = totalCures.toLocaleString();
+    tbody.innerHTML = rowsHtml;
+
+    document.getElementById("totals-dps").textContent = formatNumber(totalDPS, false);
+    document.getElementById("totals-hps").textContent = formatNumber(totalHPS, false);
+    document.getElementById("totals-cures").textContent = formatNumber(totalCures, false);
+    document.getElementById("totals-damage").textContent = formatNumber(totalDamage, true);
 
     applyColumnVisibility();
 }
@@ -578,7 +697,6 @@ function setupColumnResize() {
         const dx = e.clientX - startX;
         let newWidthPx = Math.max(40, startWidth + dx);
 
-        // Apply the new width to all header, body, and total cells matching this column
         document.querySelectorAll(`[data-col="${currentCol}"]`).forEach(el => {
             el.style.width = newWidthPx + "px";
         });
@@ -590,6 +708,31 @@ function setupColumnResize() {
             currentCol = null;
             document.body.style.cursor = "";
         }
+    });
+}
+
+function setupHeaderSorting() {
+    document.querySelectorAll("th[data-col]").forEach(th => {
+        th.addEventListener("click", e => {
+            if (e.target.classList.contains("col-resize")) return;
+            const col = th.getAttribute("data-col");
+            if (["dps", "hps", "cures", "damage"].includes(col)) {
+                const checkbox = document.getElementById("toggle-" + col);
+                if (checkbox && (checkbox.disabled || !checkbox.checked)) return;
+
+                if (sortBy === col) {
+                    sortOrder = sortOrder === "asc" ? "desc" : "asc";
+                } else {
+                    sortBy = col;
+                    sortOrder = "desc";
+                }
+                localStorage.setItem("overlaySort", sortBy);
+                localStorage.setItem("overlayOrder", sortOrder);
+                updateSortButtons();
+                updateOrderButtons();
+                if (lastCombatData) updateData(lastCombatData);
+            }
+        });
     });
 }
 
@@ -712,18 +855,28 @@ function setupControls() {
             rowLimit = parseInt(val, 10) || 24;
             localStorage.setItem("overlayRowLimit", val);
             updateRowLimitButtons(val);
+            if (lastCombatData) updateData(lastCombatData);
         });
     });
 
     document.getElementById("toggle-dps").addEventListener("change", applyColumnVisibility);
     document.getElementById("toggle-hps").addEventListener("change", applyColumnVisibility);
     document.getElementById("toggle-cures").addEventListener("change", applyColumnVisibility);
+    document.getElementById("toggle-damage").addEventListener("change", applyColumnVisibility);
+
+    document.getElementById("toggle-short-damage").addEventListener("change", (e) => {
+        useShortDamage = e.target.checked;
+        localStorage.setItem("overlayShortDamage", useShortDamage);
+        if (lastCombatData) updateData(lastCombatData);
+    });
 
     document.querySelectorAll("#sortby-buttons button").forEach(btn => {
         btn.addEventListener("click", () => {
+            if (btn.disabled) return;
             sortBy = btn.getAttribute("data-sort");
             localStorage.setItem("overlaySort", sortBy);
             updateSortButtons();
+            if (lastCombatData) updateData(lastCombatData);
         });
     });
 
@@ -732,6 +885,7 @@ function setupControls() {
             sortOrder = btn.getAttribute("data-order");
             localStorage.setItem("overlayOrder", sortOrder);
             updateOrderButtons();
+            if (lastCombatData) updateData(lastCombatData);
         });
     });
 }
