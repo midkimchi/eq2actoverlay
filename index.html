@@ -55,7 +55,7 @@ body {
     justify-content: space-between;
     align-items: center;
 }
-#header-left { display: flex; align-items: center; gap: 6px; padding-left: 10px; }
+#header-left { display: flex; align-items: center; gap: 6px; padding-left: 4px; }
 #header-right { display: flex; align-items: center; gap: 8px; padding-right: 4px; }
 #duration { min-width: 60px; text-align: right; }
 #menu-button { font-size: 20px; cursor: pointer; user-select: none; padding: 2px 4px; position: relative; top: -4px; }
@@ -142,7 +142,7 @@ body {
 #table-container {
     position: absolute;
     top: 58px;
-    left: 14px;
+    left: 8px;
     bottom: 8px;
     right: 8px;
     overflow-y: auto;
@@ -191,15 +191,6 @@ tr.highlighted-row.bold-tracked td { font-weight: bold; }
 .dps, .hps, .cures, .healing, .damage,
 th.dps, th.hps, th.cures, th.healing, th.damage { text-align: center; }
 .name { cursor: pointer; }
-
-.class-icon {
-    width: 18px;
-    height: 18px;
-    vertical-align: middle;
-    margin-right: 5px;
-    display: inline-block;
-    object-fit: contain;
-}
 
 .sort-indicator { font-size: 0.85em; margin-left: 4px; display: inline-block; }
 
@@ -297,7 +288,9 @@ table.hide-damage .damage { display: none !important; }
             </div>
 
             <div class="submenu-item"><span>Show DPS</span><input id="toggle-dps" type="checkbox" checked></div>
+            <div class="submenu-item submenu-nested" id="short-dps-container"><span>Use short DPS values</span><input id="toggle-short-dps" type="checkbox"></div>
             <div class="submenu-item"><span>Show HPS</span><input id="toggle-hps" type="checkbox" checked></div>
+            <div class="submenu-item submenu-nested" id="short-hps-container"><span>Use short HPS values</span><input id="toggle-short-hps" type="checkbox"></div>
             <div class="submenu-item"><span>Show Cures</span><input id="toggle-cures" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show Healing</span><input id="toggle-healing" type="checkbox"></div>
             <div class="submenu-item submenu-nested" id="short-healing-container"><span>Use short healing values</span><input id="toggle-short-healing" type="checkbox"></div>
@@ -322,6 +315,7 @@ table.hide-damage .damage { display: none !important; }
 
             <div class="submenu-item"><span>Enable triple click target tracking</span><input id="toggle-triple-click" type="checkbox"></div>
             <div class="submenu-item submenu-nested" id="bold-tracked-container"><span>Enable bold tracked row</span><input id="toggle-bold-tracked" type="checkbox"></div>
+            <div class="submenu-item submenu-nested" id="pin-tracked-container"><span>Pin tracked target to top</span><input id="toggle-pin-tracked" type="checkbox"></div>
         </div>
     </div>
 </div>
@@ -366,7 +360,7 @@ table.hide-damage .damage { display: none !important; }
 
 <script>
 let rowLimit = 24, sortBy = "dps", sortOrder = "desc", currentAlpha = 1.0, currentTheme = "dark";
-let useShortDamage = false, useShortHealing = false, enableTripleClick = false, enableBoldTracked = false;
+let useShortDps = false, useShortHps = false, useShortDamage = false, useShortHealing = false, enableTripleClick = false, enableBoldTracked = false, enablePinTracked = false;
 let lastCombatData = null, columnOrder = ["name", "dps", "hps", "cures", "healing", "damage"];
 let wasDragging = false, highlightedCombatantName = null;
 
@@ -411,11 +405,6 @@ const formatNumber = (val, isShort) => {
     return Math.round(num).toLocaleString();
 };
 
-const getClassIcon = c => {
-    const job = (c.type || c.Job || c.class || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
-    return job ? `images/classes/${job}.png` : "";
-};
-
 function loadSettings() {
     const savedFont = localStorage.getItem("overlayFontFamily");
     const savedSize = localStorage.getItem("overlayFontSize");
@@ -431,20 +420,26 @@ function loadSettings() {
     rowLimit = parseInt(savedRowLimit, 10) || 24;
     sortBy = localStorage.getItem("overlaySort") || "dps";
     sortOrder = localStorage.getItem("overlayOrder") || "desc";
+    useShortDps = localStorage.getItem("overlayShortDps") === "true";
+    useShortHps = localStorage.getItem("overlayShortHps") === "true";
     useShortDamage = localStorage.getItem("overlayShortDamage") === "true";
     useShortHealing = localStorage.getItem("overlayShortHealing") === "true";
     enableTripleClick = localStorage.getItem("overlayEnableTripleClick") === "true";
     enableBoldTracked = localStorage.getItem("overlayBoldTracked") === "true";
+    enablePinTracked = localStorage.getItem("overlayPinTracked") === "true";
     highlightedCombatantName = localStorage.getItem("overlayHighlightedCombatant");
 
     if (savedColumnOrder) {
         try { const p = JSON.parse(savedColumnOrder); if (Array.isArray(p) && p.length === 6) columnOrder = p; } catch (e) {}
     }
 
+    document.getElementById("toggle-short-dps").checked = useShortDps;
+    document.getElementById("toggle-short-hps").checked = useShortHps;
     document.getElementById("toggle-short-damage").checked = useShortDamage;
     document.getElementById("toggle-short-healing").checked = useShortHealing;
     document.getElementById("toggle-triple-click").checked = enableTripleClick;
     document.getElementById("toggle-bold-tracked").checked = enableBoldTracked;
+    document.getElementById("toggle-pin-tracked").checked = enablePinTracked;
 
     applyTheme(savedTheme);
     applyTransparency(savedTrans);
@@ -474,8 +469,11 @@ const updateControlsActiveState = () => {
 };
 
 const updateBoldTrackedAvailability = () => {
-    document.getElementById("bold-tracked-container").classList.toggle("disabled", !enableTripleClick);
-    document.getElementById("toggle-bold-tracked").disabled = !enableTripleClick;
+    const disabled = !enableTripleClick;
+    document.getElementById("bold-tracked-container").classList.toggle("disabled", disabled);
+    document.getElementById("toggle-bold-tracked").disabled = disabled;
+    document.getElementById("pin-tracked-container").classList.toggle("disabled", disabled);
+    document.getElementById("toggle-pin-tracked").disabled = disabled;
 };
 
 const applyTheme = theme => {
@@ -508,7 +506,7 @@ const applyColumnVisibility = () => {
     localStorage.setItem("overlayColumns", JSON.stringify(states));
     document.querySelectorAll("#main-table th, #main-table td").forEach(el => el.style.width = "");
 
-    ["healing", "damage"].forEach(col => {
+    ["dps", "hps", "healing", "damage"].forEach(col => {
         const active = states[col];
         document.getElementById(`short-${col}-container`).classList.toggle("disabled", !active);
         document.getElementById(`toggle-short-${col}`).disabled = !active;
@@ -584,27 +582,36 @@ function updateData(data) {
         return sortOrder === "asc" ? getVal(a) - getVal(b) : getVal(b) - getVal(a);
     });
 
+    if (enableTripleClick && enablePinTracked && highlightedCombatantName) {
+        const idx = sorted.findIndex(c => c.name === highlightedCombatantName);
+        if (idx !== -1) {
+            const [pinned] = sorted.splice(idx, 1);
+            sorted.unshift(pinned);
+        }
+    }
+
     let totals = [0, 0, 0, 0, 0];
     let rowsHtml = "";
 
     sorted.slice(0, rowLimit).forEach((c, idx) => {
+        const dps = parseFloat(c.encdps || 0);
+        const hps = parseFloat(c.enchps || 0);
+        const cure = parseFloat(c.cures || 0);
         const heal = parseFloat(c.healed || c.HEALED || c.heals || c.healing || c.HEALS || 0);
         const dmg = parseFloat(c.damage || c.DAMAGE || 0);
-        totals[0] += Math.round(parseFloat(c.encdps || 0));
-        totals[1] += Math.round(parseFloat(c.enchps || 0));
-        totals[2] += Math.round(parseFloat(c.cures || 0));
+        
+        totals[0] += Math.round(dps);
+        totals[1] += Math.round(hps);
+        totals[2] += Math.round(cure);
         totals[3] += Math.round(heal);
         totals[4] += Math.round(dmg);
 
-        const iconPath = getClassIcon(c);
-        const iconHtml = iconPath ? `<img class="class-icon" src="${iconPath}" alt="" onerror="this.style.display='none'">` : '';
-
         let rowCellsHtml = "";
         columnOrder.forEach(col => {
-            if (col === "name") rowCellsHtml += `<td class="name" data-col="name" data-name="${c.name}">${iconHtml}${c.name}</td>`;
-            else if (col === "dps") rowCellsHtml += `<td class="dps" data-col="dps">${formatNumber(c.encdps, false)}</td>`;
-            else if (col === "hps") rowCellsHtml += `<td class="hps" data-col="hps">${formatNumber(c.enchps, false)}</td>`;
-            else if (col === "cures") rowCellsHtml += `<td class="cures" data-col="cures">${formatNumber(c.cures, false)}</td>`;
+            if (col === "name") rowCellsHtml += `<td class="name" data-col="name" data-name="${c.name}">${c.name}</td>`;
+            else if (col === "dps") rowCellsHtml += `<td class="dps" data-col="dps">${formatNumber(dps, useShortDps)}</td>`;
+            else if (col === "hps") rowCellsHtml += `<td class="hps" data-col="hps">${formatNumber(hps, useShortHps)}</td>`;
+            else if (col === "cures") rowCellsHtml += `<td class="cures" data-col="cures">${formatNumber(cure, false)}</td>`;
             else if (col === "healing") rowCellsHtml += `<td class="healing" data-col="healing">${formatNumber(heal, useShortHealing)}</td>`;
             else if (col === "damage") rowCellsHtml += `<td class="damage" data-col="damage">${formatNumber(dmg, useShortDamage)}</td>`;
         });
@@ -617,7 +624,9 @@ function updateData(data) {
     rowsHtml += `<tr class="spacer-row" style="height: 100%;"><td colspan="6" style="padding: 0; border: none; height: 100%; pointer-events: none;"></td></tr>`;
     document.getElementById("rows").innerHTML = rowsHtml;
 
-    ["dps", "hps", "cures"].forEach((k, i) => document.getElementById(`totals-${k}`).textContent = formatNumber(totals[i], false));
+    document.getElementById("totals-dps").textContent = formatNumber(totals[0], useShortDps);
+    document.getElementById("totals-hps").textContent = formatNumber(totals[1], useShortHps);
+    document.getElementById("totals-cures").textContent = formatNumber(totals[2], false);
     document.getElementById("totals-healing").textContent = formatNumber(totals[3], useShortHealing);
     document.getElementById("totals-damage").textContent = formatNumber(totals[4], useShortDamage);
 
@@ -801,6 +810,18 @@ function setupControls() {
         document.getElementById(`toggle-${col}`).addEventListener("change", applyColumnVisibility);
     });
 
+    document.getElementById("toggle-short-dps").addEventListener("change", e => {
+        useShortDps = e.target.checked;
+        localStorage.setItem("overlayShortDps", useShortDps);
+        if (lastCombatData) updateData(lastCombatData);
+    });
+
+    document.getElementById("toggle-short-hps").addEventListener("change", e => {
+        useShortHps = e.target.checked;
+        localStorage.setItem("overlayShortHps", useShortHps);
+        if (lastCombatData) updateData(lastCombatData);
+    });
+
     document.getElementById("toggle-short-healing").addEventListener("change", e => {
         useShortHealing = e.target.checked;
         localStorage.setItem("overlayShortHealing", useShortHealing);
@@ -827,6 +848,12 @@ function setupControls() {
     document.getElementById("toggle-bold-tracked").addEventListener("change", e => {
         enableBoldTracked = e.target.checked;
         localStorage.setItem("overlayBoldTracked", enableBoldTracked);
+        if (lastCombatData) updateData(lastCombatData);
+    });
+
+    document.getElementById("toggle-pin-tracked").addEventListener("change", e => {
+        enablePinTracked = e.target.checked;
+        localStorage.setItem("overlayPinTracked", enablePinTracked);
         if (lastCombatData) updateData(lastCombatData);
     });
 
