@@ -576,15 +576,20 @@ function setupColumnResize() {
         if (!dragging || !currentCol) return;
 
         const dx = e.clientX - startX;
-        const tableWidth = document.querySelector("table").getBoundingClientRect().width;
         let newWidthPx = Math.max(40, startWidth + dx);
-        let newWidthPercent = (newWidthPx / tableWidth) * 100;
+
+        // Apply the new width to all header, body, and total cells matching this column
+        document.querySelectorAll(`[data-col="${currentCol}"]`).forEach(el => {
+            el.style.width = newWidthPx + "px";
+        });
     });
 
     document.addEventListener("mouseup", () => {
-        dragging = false;
-        currentCol = null;
-        document.body.style.cursor = "";
+        if (dragging) {
+            dragging = false;
+            currentCol = null;
+            document.body.style.cursor = "";
+        }
     });
 }
 
