@@ -206,17 +206,28 @@ th {
 
 tr:nth-child(even) { background-color: var(--row-alt); }
 
-.name   { text-align: left; }
-.dps    { text-align: center; }
-.hps    { text-align: center; }
-.cures  { text-align: center; }
-.damage { text-align: center; }
+.name    { text-align: left; }
+.dps     { text-align: center; }
+.hps     { text-align: center; }
+.cures   { text-align: center; }
+.healing { text-align: center; }
+.damage  { text-align: center; }
 
-th.name   { text-align: left; }
-th.dps    { text-align: center; }
-th.hps    { text-align: center; }
-th.cures  { text-align: center; }
-th.damage { text-align: center; }
+th.name    { text-align: left; }
+th.dps     { text-align: center; }
+th.hps     { text-align: center; }
+th.cures   { text-align: center; }
+th.healing { text-align: center; }
+th.damage  { text-align: center; }
+
+.class-icon {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    margin-right: 5px;
+    display: inline-block;
+    object-fit: contain;
+}
 
 .sort-indicator {
     font-size: 0.85em;
@@ -228,6 +239,7 @@ th.damage { text-align: center; }
 table.hide-dps .dps, table.hide-dps th.dps { display: none !important; }
 table.hide-hps .hps, table.hide-hps th.hps { display: none !important; }
 table.hide-cures .cures, table.hide-cures th.cures { display: none !important; }
+table.hide-healing .healing, table.hide-healing th.healing { display: none !important; }
 table.hide-damage .damage, table.hide-damage th.damage { display: none !important; }
 
 .col-resize {
@@ -335,6 +347,8 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
             <div class="submenu-item"><span>Show DPS</span><input id="toggle-dps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show HPS</span><input id="toggle-hps" type="checkbox" checked></div>
             <div class="submenu-item"><span>Show Cures</span><input id="toggle-cures" type="checkbox" checked></div>
+            <div class="submenu-item"><span>Show Healing</span><input id="toggle-healing" type="checkbox"></div>
+            <div class="submenu-item submenu-nested" id="short-healing-container"><span>Use short healing values</span><input id="toggle-short-healing" type="checkbox"></div>
             <div class="submenu-item"><span>Show Damage</span><input id="toggle-damage" type="checkbox"></div>
             <div class="submenu-item submenu-nested" id="short-damage-container"><span>Use short damage values</span><input id="toggle-short-damage" type="checkbox"></div>
 
@@ -345,6 +359,7 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
                 <button data-sort="dps">DPS</button>
                 <button data-sort="hps">HPS</button>
                 <button data-sort="cures">Cures</button>
+                <button data-sort="healing">Healing</button>
                 <button data-sort="damage">Damage</button>
             </div>
 
@@ -372,11 +387,12 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
     <table id="main-table">
         <thead>
             <tr>
-                <th class="name"   data-col="name">Name<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="dps"    data-col="dps">DPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="hps"    data-col="hps">HPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="cures"  data-col="cures">Cures<span class="sort-indicator"></span><span class="col-resize"></span></th>
-                <th class="damage" data-col="damage">Damage<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="name"    data-col="name">Name<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="dps"     data-col="dps">DPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="hps"     data-col="hps">HPS<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="cures"   data-col="cures">Cures<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="healing" data-col="healing">Healing<span class="sort-indicator"></span><span class="col-resize"></span></th>
+                <th class="damage"  data-col="damage">Damage<span class="sort-indicator"></span><span class="col-resize"></span></th>
             </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -386,11 +402,12 @@ table.hide-damage .damage, table.hide-damage th.damage { display: none !importan
 <!-- TOTALS -->
 <table id="totals-table">
     <tr>
-        <td id="totals-name"   class="name"   data-col="name">Total:</td>
-        <td id="totals-dps"    class="dps"    data-col="dps">0</td>
-        <td id="totals-hps"    class="hps"    data-col="hps">0</td>
-        <td id="totals-cures"  class="cures"  data-col="cures">0</td>
-        <td id="totals-damage" class="damage" data-col="damage">0</td>
+        <td id="totals-name"    class="name"    data-col="name">Total:</td>
+        <td id="totals-dps"     class="dps"     data-col="dps">0</td>
+        <td id="totals-hps"     class="hps"     data-col="hps">0</td>
+        <td id="totals-cures"   class="cures"   data-col="cures">0</td>
+        <td id="totals-healing" class="healing" data-col="healing">0</td>
+        <td id="totals-damage"  class="damage"  data-col="damage">0</td>
     </tr>
 </table>
 
@@ -403,6 +420,7 @@ let sortOrder = "desc";
 let currentAlpha = 1.0;
 let currentTheme = "dark";
 let useShortDamage = false;
+let useShortHealing = false;
 let lastCombatData = null;
 
 const themeColors = {
@@ -473,6 +491,7 @@ function loadSettings() {
     const savedSort = localStorage.getItem("overlaySort") || "dps";
     const savedOrder = localStorage.getItem("overlayOrder") || "desc";
     const savedShortDamage = localStorage.getItem("overlayShortDamage") === "true";
+    const savedShortHealing = localStorage.getItem("overlayShortHealing") === "true";
 
     if (savedFont) document.body.style.fontFamily = savedFont;
     if (savedSize) document.body.style.fontSize = savedSize + "px";
@@ -481,8 +500,10 @@ function loadSettings() {
     sortBy = savedSort;
     sortOrder = savedOrder;
     useShortDamage = savedShortDamage;
+    useShortHealing = savedShortHealing;
 
     document.getElementById("toggle-short-damage").checked = useShortDamage;
+    document.getElementById("toggle-short-healing").checked = useShortHealing;
 
     applyTheme(savedTheme);
     applyTransparency(savedTrans);
@@ -493,6 +514,7 @@ function loadSettings() {
             document.getElementById("toggle-dps").checked = cols.dps !== undefined ? !!cols.dps : true;
             document.getElementById("toggle-hps").checked = cols.hps !== undefined ? !!cols.hps : true;
             document.getElementById("toggle-cures").checked = cols.cures !== undefined ? !!cols.cures : true;
+            document.getElementById("toggle-healing").checked = !!cols.healing;
             document.getElementById("toggle-damage").checked = !!cols.damage;
         } catch (e) {}
     }
@@ -547,9 +569,10 @@ function applyColumnVisibility() {
     const showDps = document.getElementById("toggle-dps").checked;
     const showHps = document.getElementById("toggle-hps").checked;
     const showCures = document.getElementById("toggle-cures").checked;
+    const showHealing = document.getElementById("toggle-healing").checked;
     const showDamage = document.getElementById("toggle-damage").checked;
     
-    const cols = { dps: showDps, hps: showHps, cures: showCures, damage: showDamage };
+    const cols = { dps: showDps, hps: showHps, cures: showCures, healing: showHealing, damage: showDamage };
     localStorage.setItem("overlayColumns", JSON.stringify(cols));
     
     const mainTable = document.getElementById("main-table");
@@ -564,8 +587,22 @@ function applyColumnVisibility() {
     mainTable.classList.toggle("hide-cures", !showCures);
     totalsTable.classList.toggle("hide-cures", !showCures);
 
+    mainTable.classList.toggle("hide-healing", !showHealing);
+    totalsTable.classList.toggle("hide-healing", !showHealing);
+
     mainTable.classList.toggle("hide-damage", !showDamage);
     totalsTable.classList.toggle("hide-damage", !showDamage);
+
+    // Update dependency status for short healing values
+    const shortHealingContainer = document.getElementById("short-healing-container");
+    const shortHealingCheckbox = document.getElementById("toggle-short-healing");
+    if (showHealing) {
+        shortHealingContainer.classList.remove("disabled");
+        shortHealingCheckbox.disabled = false;
+    } else {
+        shortHealingContainer.classList.add("disabled");
+        shortHealingCheckbox.disabled = true;
+    }
 
     // Update dependency status for short damage values
     const shortDamageContainer = document.getElementById("short-damage-container");
@@ -578,27 +615,29 @@ function applyColumnVisibility() {
         shortDamageCheckbox.disabled = true;
     }
 
-    updateSortButtonAvailability(showDps, showHps, showCures, showDamage);
+    updateSortButtonAvailability(showDps, showHps, showCures, showHealing, showDamage);
 }
 
-function updateSortButtonAvailability(showDps, showHps, showCures, showDamage) {
+function updateSortButtonAvailability(showDps, showHps, showCures, showHealing, showDamage) {
     const dpsBtn = document.querySelector('#sortby-buttons button[data-sort="dps"]');
     const hpsBtn = document.querySelector('#sortby-buttons button[data-sort="hps"]');
     const curesBtn = document.querySelector('#sortby-buttons button[data-sort="cures"]');
+    const healingBtn = document.querySelector('#sortby-buttons button[data-sort="healing"]');
     const damageBtn = document.querySelector('#sortby-buttons button[data-sort="damage"]');
 
     if (dpsBtn) dpsBtn.disabled = !showDps;
     if (hpsBtn) hpsBtn.disabled = !showHps;
     if (curesBtn) curesBtn.disabled = !showCures;
+    if (healingBtn) healingBtn.disabled = !showHealing;
     if (damageBtn) damageBtn.disabled = !showDamage;
 
     let currentSortHidden = (sortBy === "dps" && !showDps) ||
                             (sortBy === "hps" && !showHps) ||
                             (sortBy === "cures" && !showCures) ||
+                            (sortBy === "healing" && !showHealing) ||
                             (sortBy === "damage" && !showDamage);
 
     if (currentSortHidden) {
-        // Priority order: Name -> DPS -> HPS -> Cures -> Damage
         if (showDps) {
             sortBy = "dps";
             sortOrder = "desc";
@@ -607,6 +646,9 @@ function updateSortButtonAvailability(showDps, showHps, showCures, showDamage) {
             sortOrder = "desc";
         } else if (showCures) {
             sortBy = "cures";
+            sortOrder = "desc";
+        } else if (showHealing) {
+            sortBy = "healing";
             sortOrder = "desc";
         } else if (showDamage) {
             sortBy = "damage";
@@ -623,14 +665,21 @@ function updateSortButtonAvailability(showDps, showHps, showCures, showDamage) {
     }
 }
 
-function formatNumber(val, isDamage) {
+function formatNumber(val, isShort) {
     const num = parseFloat(val) || 0;
-    if (isDamage && useShortDamage) {
+    if (isShort) {
         if (num >= 1e9) return (num / 1e9).toFixed(1) + 'b';
         if (num >= 1e6) return (num / 1e6).toFixed(1) + 'm';
         if (num >= 1e3) return (num / 1e3).toFixed(1) + 'k';
     }
     return Math.round(num).toLocaleString();
+}
+
+function getClassIcon(combatant) {
+    const job = (combatant.type || combatant.Job || combatant.class || "").toLowerCase().trim();
+    const normalized = job.replace(/[^a-z0-9]/g, "");
+    if (!normalized) return "";
+    return `images/classes/${normalized}.png`;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -679,6 +728,9 @@ function updateData(data) {
         } else if (sortBy === "cures") {
             av = parseFloat(a.cures || 0);
             bv = parseFloat(b.cures || 0);
+        } else if (sortBy === "healing") {
+            av = parseFloat(a.healed || a.HEALED || a.heals || a.healing || a.HEALS || 0);
+            bv = parseFloat(b.healed || b.HEALED || b.heals || b.healing || b.HEALS || 0);
         } else if (sortBy === "damage") {
             av = parseFloat(a.damage || a.DAMAGE || 0);
             bv = parseFloat(b.damage || b.DAMAGE || 0);
@@ -686,24 +738,31 @@ function updateData(data) {
         return sortOrder === "asc" ? av - bv : bv - av;
     });
 
-    let totalDPS = 0, totalHPS = 0, totalCures = 0, totalDamage = 0;
+    let totalDPS = 0, totalHPS = 0, totalCures = 0, totalHealing = 0, totalDamage = 0;
     let rank = 1;
     let rowsHtml = "";
 
     for (let c of sorted) {
         if (rank > rowLimit) break;
 
+        const combatantHealing = parseFloat(c.healed || c.HEALED || c.heals || c.healing || c.HEALS || 0);
+
         totalDPS += Math.round(parseFloat(c.encdps || 0));
         totalHPS += Math.round(parseFloat(c.enchps || 0));
         totalCures += Math.round(parseFloat(c.cures || 0));
+        totalHealing += Math.round(combatantHealing);
         totalDamage += Math.round(parseFloat(c.damage || c.DAMAGE || 0));
 
+        const iconPath = getClassIcon(c);
+        const iconHtml = iconPath ? `<img class="class-icon" src="${iconPath}" alt="${c.type || ''}" onerror="this.style.display='none'">` : '';
+
         rowsHtml += `<tr>
-            <td class="name" data-col="name">${c.name}</td>
+            <td class="name" data-col="name">${iconHtml}${c.name}</td>
             <td class="dps" data-col="dps">${formatNumber(c.encdps, false)}</td>
             <td class="hps" data-col="hps">${formatNumber(c.enchps, false)}</td>
             <td class="cures" data-col="cures">${formatNumber(c.cures, false)}</td>
-            <td class="damage" data-col="damage">${formatNumber(c.damage || c.DAMAGE || 0, true)}</td>
+            <td class="healing" data-col="healing">${formatNumber(combatantHealing, useShortHealing)}</td>
+            <td class="damage" data-col="damage">${formatNumber(c.damage || c.DAMAGE || 0, useShortDamage)}</td>
         </tr>`;
         rank++;
     }
@@ -713,7 +772,8 @@ function updateData(data) {
     document.getElementById("totals-dps").textContent = formatNumber(totalDPS, false);
     document.getElementById("totals-hps").textContent = formatNumber(totalHPS, false);
     document.getElementById("totals-cures").textContent = formatNumber(totalCures, false);
-    document.getElementById("totals-damage").textContent = formatNumber(totalDamage, true);
+    document.getElementById("totals-healing").textContent = formatNumber(totalHealing, useShortHealing);
+    document.getElementById("totals-damage").textContent = formatNumber(totalDamage, useShortDamage);
 
     applyColumnVisibility();
     updateSortIndicators();
@@ -759,7 +819,7 @@ function setupHeaderSorting() {
         th.addEventListener("click", e => {
             if (e.target.classList.contains("col-resize")) return;
             const col = th.getAttribute("data-col");
-            if (["name", "dps", "hps", "cures", "damage"].includes(col)) {
+            if (["name", "dps", "hps", "cures", "healing", "damage"].includes(col)) {
                 if (col !== "name") {
                     const checkbox = document.getElementById("toggle-" + col);
                     if (checkbox && (checkbox.disabled || !checkbox.checked)) return;
@@ -908,7 +968,14 @@ function setupControls() {
     document.getElementById("toggle-dps").addEventListener("change", applyColumnVisibility);
     document.getElementById("toggle-hps").addEventListener("change", applyColumnVisibility);
     document.getElementById("toggle-cures").addEventListener("change", applyColumnVisibility);
+    document.getElementById("toggle-healing").addEventListener("change", applyColumnVisibility);
     document.getElementById("toggle-damage").addEventListener("change", applyColumnVisibility);
+
+    document.getElementById("toggle-short-healing").addEventListener("change", (e) => {
+        useShortHealing = e.target.checked;
+        localStorage.setItem("overlayShortHealing", useShortHealing);
+        if (lastCombatData) updateData(lastCombatData);
+    });
 
     document.getElementById("toggle-short-damage").addEventListener("change", (e) => {
         useShortDamage = e.target.checked;
