@@ -155,7 +155,7 @@ body {
     width: 100%;
     height: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
     font-variant-numeric: tabular-nums;
     pointer-events: auto;
 }
@@ -416,6 +416,7 @@ function loadSettings() {
     const savedRowLimit = localStorage.getItem("overlayRowLimit") || "24";
     const savedColumns = localStorage.getItem("overlayColumns");
     const savedColumnOrder = localStorage.getItem("overlayColumnOrder");
+    const savedWidths = localStorage.getItem("overlayColumnWidths");
 
     if (savedFont) document.body.style.fontFamily = savedFont;
     if (savedSize) document.body.style.fontSize = savedSize + "px";
@@ -456,10 +457,20 @@ function loadSettings() {
         } catch (e) {}
     }
 
+    applyColumnVisibility();
+
+    if (savedWidths) {
+        try {
+            const widths = JSON.parse(savedWidths);
+            Object.entries(widths).forEach(([col, w]) => {
+                document.querySelectorAll(`[data-col="${col}"]`).forEach(el => el.style.width = w);
+            });
+        } catch (e) {}
+    }
+
     updateIndicators("#font-style-menu .submenu-item", "data-font", savedFont || "Segoe UI, sans-serif");
     updateIndicators("#font-size-menu .submenu-item", "data-size", savedSize || "19");
     updateIndicators("#themes-menu .submenu-item[data-theme]", "data-theme", savedTheme);
-    applyColumnVisibility();
     updateActiveBtn("#rowlimit-buttons button", "data-rowlimit", savedRowLimit);
     updateControlsActiveState();
     updateSortIndicators();
@@ -507,7 +518,17 @@ const applyColumnVisibility = () => {
     });
 
     localStorage.setItem("overlayColumns", JSON.stringify(states));
-    document.querySelectorAll("#main-table th, #main-table td").forEach(el => el.style.width = "");
+    localStorage.removeItem("overlayColumnWidths");
+
+    const visibleCols = columnOrder.filter(col => col === "name" || states[col]);
+    const pct = (100 / visibleCols.length) + "%";
+
+    columnOrder.forEach(col => {
+        const isVisible = col === "name" || states[col];
+        document.querySelectorAll(`[data-col="${col}"]`).forEach(el => {
+            el.style.width = isVisible ? pct : "";
+        });
+    });
 
     ["dps", "hps", "healing", "damage"].forEach(col => {
         const active = states[col];
@@ -633,7 +654,6 @@ function updateData(data) {
     document.getElementById("totals-healing").textContent = formatNumber(totals[3], useShortHealing);
     document.getElementById("totals-damage").textContent = formatNumber(totals[4], useShortDamage);
 
-    applyColumnVisibility();
     updateSortIndicators();
 }
 
@@ -655,25 +675,71 @@ function setupNameTripleClick() {
     });
 }
 
+function saveColumnWidths() {
+    const widths = {};
+    document.querySelectorAll("#main-table thead th[data-col]").forEach(th => {
+        if (th.style.display !== "none") {
+            widths[th.getAttribute("data-col")] = th.style.width;
+        }
+    });
+    localStorage.setItem("overlayColumnWidths", JSON.stringify(widths));
+}
+
 function setupColumnResize() {
-    let dragging = false, startX = 0, startWidth = 0, currentCol = null;
+    let dragging = false, startX = 0, startTh = null, nextTh = null, startThWidth = 0, startNextThWidth = 0;
+
     document.querySelectorAll(".col-resize").forEach(handle => {
         handle.addEventListener("mousedown", e => {
             e.preventDefault();
             dragging = true;
-            currentCol = handle.parentElement.getAttribute("data-col");
-            startX = e.clientX;
-            startWidth = handle.parentElement.getBoundingClientRect().width;
-            document.body.style.cursor = "col-resize";
+            startTh = handle.parentElement;
+            
+            const visibleThs = Array.from(document.querySelectorAll("#main-table thead th")).filter(th => {
+                const col = th.getAttribute("data-col");
+                const mainTable = document.getElementById("main-table");
+                return !mainTable.classList.contains(`hide-${col}`);
+            });
+
+            const idx = visibleThs.indexOf(startTh);
+            if (idx !== -1 && idx < visibleThs.length - 1) {
+                nextTh = visibleThs[idx + 1];
+                startX = e.clientX;
+                startThWidth = startTh.getBoundingClientRect().width;
+                startNextThWidth = nextTh.getBoundingClientRect().width;
+                document.body.style.cursor = "col-resize";
+            } else {
+                dragging = false;
+            }
         });
     });
+
     document.addEventListener("mousemove", e => {
-        if (!dragging || !currentCol) return;
-        const newWidth = Math.max(40, startWidth + (e.clientX - startX));
-        document.querySelectorAll(`[data-col="${currentCol}"]`).forEach(el => el.style.width = newWidth + "px");
+        if (!dragging || !startTh || !nextTh) return;
+        const containerWidth = document.getElementById("table-container").clientWidth;
+        const delta = e.clientX - startX;
+        const newThWidthPx = startThWidth + delta;
+        const newNextThWidthPx = startNextThWidth - delta;
+
+        if (newThWidthPx > 40 && newNextThWidthPx > 40) {
+            const col1 = startTh.getAttribute("data-col");
+            const col2 = nextTh.getAttribute("data-col");
+
+            const pct1 = (newThWidthPx / containerWidth) * 100;
+            const pct2 = (newNextThWidthPx / containerWidth) * 100;
+
+            document.querySelectorAll(`[data-col="${col1}"]`).forEach(el => el.style.width = pct1 + "%");
+            document.querySelectorAll(`[data-col="${col2}"]`).forEach(el => el.style.width = pct2 + "%");
+        }
     });
+
     document.addEventListener("mouseup", () => {
-        if (dragging) { dragging = false; currentCol = null; document.body.style.cursor = ""; }
+        if (dragging) {
+            dragging = false;
+            startTh = null;
+            nextTh = null;
+            document.body.style.cursor = "";
+            saveColumnWidths();
+        }
     });
 }
 
