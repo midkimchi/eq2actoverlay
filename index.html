@@ -61,6 +61,53 @@ body {
 #duration { min-width: 60px; text-align: right; }
 #menu-button { font-size: 20px; cursor: pointer; user-select: none; padding: 2px 4px; position: relative; top: -4px; }
 
+/* HISTORY TITLE TRIGGER & DROPDOWN */
+#history-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: default;
+}
+#history-container.history-enabled {
+    cursor: pointer;
+}
+#history-arrow {
+    display: none;
+    margin-left: 6px;
+    font-size: 0.9em;
+}
+#history-container.history-enabled #history-arrow {
+    display: inline-block;
+}
+#history-select-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
+    border-radius: 3px;
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+    max-height: 240px;
+    overflow-y: auto;
+    min-width: 220px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+#history-select-menu .submenu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--fg);
+    white-space: nowrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#history-select-menu .submenu-item:hover {
+    background-color: var(--hover);
+}
+
 /* MAIN MENU */
 #menu {
     position: absolute;
@@ -282,6 +329,19 @@ table.hide-damage .damage { display: none !important; }
     <div class="menu-section">
         <div id="data-toggle" class="menu-header"><span>Data</span><span id="data-arrow">▸</span></div>
         <div id="data-menu" class="submenu">
+            <div class="submenu-item"><span>Enable encounter history</span><input id="toggle-history" type="checkbox"></div>
+            <div class="submenu-item submenu-nested" id="historylimit-text-container"><span>History Limit</span></div>
+            <div class="submenu-buttons submenu-nested" id="historylimit-buttons">
+                <button data-historylimit="5">5</button>
+                <button data-historylimit="10">10</button>
+                <button data-historylimit="15">15</button>
+                <button data-historylimit="25">25</button>
+                <button data-historylimit="50">50</button>
+            </div>
+            <div class="submenu-buttons submenu-nested" id="clear-history-container" style="padding-top: 0;">
+                <button id="clear-history-btn" style="width: 100%; border-color: var(--border);">Clear History Cache</button>
+            </div>
+
             <div class="submenu-item"><span>Row Limit</span></div>
             <div class="submenu-buttons" id="rowlimit-buttons">
                 <button data-rowlimit="6">6</button>
@@ -324,7 +384,14 @@ table.hide-damage .damage { display: none !important; }
 
 <!-- HEADER -->
 <div id="header">
-    <div id="header-left"><span id="title">Waiting for combat...</span></div>
+    <div id="header-left">
+        <div id="history-container">
+            <span id="title">Waiting for combat...</span><span id="history-arrow">▾</span>
+            <div id="history-select-menu">
+                <div class="submenu-item" data-value="current">Current Encounter</div>
+            </div>
+        </div>
+    </div>
     <div id="header-right">
         <span id="duration">00:00</span>
         <div id="menu-button">⚙️</div>
@@ -365,6 +432,16 @@ let rowLimit = 24, sortBy = "dps", sortOrder = "desc", currentAlpha = 1.0, curre
 let useShortDps = false, useShortHps = false, useShortDamage = false, useShortHealing = false, enableTripleClick = false, enableBoldTracked = false, enablePinTracked = false;
 let lastCombatData = null, columnOrder = ["name", "dps", "hps", "cures", "healing", "damage"];
 let wasDragging = false, highlightedCombatantName = null;
+
+// History Variables
+let enableHistory = false;
+let historyLimit = 15;
+let encounterHistory = [];
+let viewingMode = "current";
+let wasActive = false;
+let lastHistorySaveTime = 0;
+let currentFightBuffer = null;
+let combatEndTimeout = null;
 
 const themeColors = {
     dark: "18, 18, 18, 30, 30, 30".split(", "),
@@ -408,6 +485,13 @@ const formatNumber = (val, isShort) => {
     return Math.round(num).toLocaleString();
 };
 
+const formatEncounterTitle = title => {
+    if (!title || title === "Encounter") return "Current Encounter";
+    // Strip out DPS info entirely from title (e.g., "(1234 DPS)", "(4,932 DPS)")
+    let clean = title.replace(/\s*\([^)]*dps[^)]*\)/gi, '').trim();
+    return (clean === "" || clean === "Encounter") ? "Current Encounter" : clean;
+};
+
 function loadSettings() {
     const savedFont = localStorage.getItem("overlayFontFamily");
     const savedSize = localStorage.getItem("overlayFontSize");
@@ -417,6 +501,17 @@ function loadSettings() {
     const savedColumns = localStorage.getItem("overlayColumns");
     const savedColumnOrder = localStorage.getItem("overlayColumnOrder");
     const savedWidths = localStorage.getItem("overlayColumnWidths");
+    
+    enableHistory = localStorage.getItem("overlayEnableHistory") === "true";
+    document.getElementById("toggle-history").checked = enableHistory;
+    
+    const savedHistoryLimit = localStorage.getItem("overlayHistoryLimit");
+    if (savedHistoryLimit) historyLimit = parseInt(savedHistoryLimit, 10);
+    
+    try {
+        const savedHistory = localStorage.getItem("overlayEncounterHistory");
+        if (savedHistory) encounterHistory = JSON.parse(savedHistory);
+    } catch (e) { encounterHistory = []; }
 
     if (savedFont) document.body.style.fontFamily = savedFont;
     if (savedSize) document.body.style.fontSize = savedSize + "px";
@@ -475,6 +570,8 @@ function loadSettings() {
     updateControlsActiveState();
     updateSortIndicators();
     updateBoldTrackedAvailability();
+    updateHistoryAvailability();
+    updateHistoryDropdown();
 }
 
 const updateControlsActiveState = () => {
@@ -488,6 +585,18 @@ const updateBoldTrackedAvailability = () => {
     document.getElementById("toggle-bold-tracked").disabled = disabled;
     document.getElementById("pin-tracked-container").classList.toggle("disabled", disabled);
     document.getElementById("toggle-pin-tracked").disabled = disabled;
+};
+
+const updateHistoryAvailability = () => {
+    const disabled = !enableHistory;
+    document.getElementById("historylimit-text-container").classList.toggle("disabled", disabled);
+    document.getElementById("historylimit-buttons").classList.toggle("disabled", disabled);
+    document.getElementById("clear-history-container").classList.toggle("disabled", disabled);
+    
+    document.querySelectorAll("#historylimit-buttons button").forEach(btn => btn.disabled = disabled);
+    document.getElementById("clear-history-btn").disabled = disabled;
+    
+    document.getElementById("history-container").classList.toggle("history-enabled", enableHistory);
 };
 
 const applyTheme = theme => {
@@ -571,9 +680,10 @@ const updateSortIndicators = () => {
 
 document.addEventListener("DOMContentLoaded", () => {
     loadSettings();
-    addOverlayListener("CombatData", e => updateData(e));
+    addOverlayListener("CombatData", e => handleCombatData(e));
     startOverlayEvents();
     setupMenu();
+    setupHistory();
     setupColumnResize();
     setupColumnDragDrop();
     setupHeaderSorting();
@@ -581,12 +691,116 @@ document.addEventListener("DOMContentLoaded", () => {
     setupNameTripleClick();
 });
 
-function updateData(data) {
-    if (data) lastCombatData = data;
-    else if (!lastCombatData) return;
-    else data = lastCombatData;
+// HISTORY MANAGEMENT
+function trimHistory() {
+    if (encounterHistory.length > historyLimit) {
+        encounterHistory.length = historyLimit;
+        try { localStorage.setItem("overlayEncounterHistory", JSON.stringify(encounterHistory)); } catch(e) {}
+        updateHistoryDropdown();
+    }
+}
 
-    document.getElementById("title").textContent = data.Encounter.title || "Combat";
+function saveEncounterToHistory(data) {
+    if (!enableHistory || !data || !data.Encounter) return;
+
+    const dps = parseFloat(data.Encounter.encdps || 0);
+    const duration = data.Encounter.duration || "00:00";
+    if (duration === "00:00" && dps === 0) return;
+
+    const now = Date.now();
+    if (now - lastHistorySaveTime < 1000) return; 
+
+    try {
+        const historyData = JSON.parse(JSON.stringify(data));
+        historyData.timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        encounterHistory.unshift(historyData);
+        trimHistory();
+        
+        localStorage.setItem("overlayEncounterHistory", JSON.stringify(encounterHistory));
+        updateHistoryDropdown();
+        lastHistorySaveTime = now;
+    } catch(e) { console.error("History saving failed:", e); }
+}
+
+function updateHistoryDropdown() {
+    const menuEl = document.getElementById("history-select-menu");
+    
+    let html = `<div class="submenu-item" data-value="current">Current Encounter</div>`;
+    
+    encounterHistory.forEach((enc, idx) => {
+        const rawTitle = enc.Encounter.title || "Current Encounter";
+        const title = formatEncounterTitle(rawTitle);
+        const time = enc.timestamp || "";
+        
+        html += `<div class="submenu-item" data-value="${idx}">[${time}] ${title}</div>`;
+    });
+    
+    menuEl.innerHTML = html;
+    
+    menuEl.querySelectorAll(".submenu-item").forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const val = item.getAttribute("data-value");
+            viewingMode = val;
+            
+            if (val === "current") {
+                if (lastCombatData) renderData(lastCombatData);
+                else document.getElementById("title").textContent = "Waiting for combat...";
+            } else {
+                const idx = parseInt(val, 10);
+                if (encounterHistory[idx]) {
+                    renderData(encounterHistory[idx], true);
+                }
+            }
+            menuEl.style.display = "none";
+        });
+    });
+}
+
+function handleCombatData(e) {
+    if (!e || !e.Encounter) return;
+    
+    const isActive = e.isActive === "true" || e.isActive === true;
+    currentFightBuffer = e;
+
+    if (wasActive && !isActive) {
+        if (combatEndTimeout) clearTimeout(combatEndTimeout);
+        combatEndTimeout = setTimeout(() => {
+            if (currentFightBuffer) {
+                saveEncounterToHistory(currentFightBuffer);
+                currentFightBuffer = null;
+            }
+        }, 1000);
+    } else if (isActive && !wasActive) {
+        if (combatEndTimeout) {
+            clearTimeout(combatEndTimeout);
+            combatEndTimeout = null;
+        }
+    }
+
+    wasActive = isActive;
+    lastCombatData = e;
+    
+    if (viewingMode === "current") {
+        renderData(e);
+    }
+}
+
+function reRenderCurrentView() {
+    if (viewingMode === "current" && lastCombatData) {
+        renderData(lastCombatData);
+    } else if (viewingMode !== "current" && encounterHistory[parseInt(viewingMode)]) {
+        renderData(encounterHistory[parseInt(viewingMode)], true);
+    }
+}
+
+function renderData(data, isHistory = false) {
+    if (!data) return;
+
+    const rawTitle = data.Encounter.title || "Current Encounter";
+    const title = formatEncounterTitle(rawTitle);
+    document.getElementById("title").textContent = (isHistory ? "[History] " : "") + title;
     document.getElementById("duration").textContent = data.Encounter.duration || "00:00";
 
     const combatants = data.Combatant;
@@ -657,6 +871,47 @@ function updateData(data) {
     updateSortIndicators();
 }
 
+function setupHistory() {
+    updateActiveBtn("#historylimit-buttons button", "data-historylimit", historyLimit);
+    
+    document.querySelectorAll("#historylimit-buttons button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            if (btn.disabled) return;
+            historyLimit = parseInt(btn.getAttribute("data-historylimit"), 10) || 15;
+            localStorage.setItem("overlayHistoryLimit", historyLimit);
+            updateActiveBtn("#historylimit-buttons button", "data-historylimit", historyLimit);
+            trimHistory();
+        });
+    });
+
+    const historyContainer = document.getElementById("history-container");
+    const historyMenu = document.getElementById("history-select-menu");
+
+    historyContainer.addEventListener("click", e => {
+        if (!enableHistory) return;
+        e.stopPropagation();
+        document.getElementById("menu").style.display = "none";
+        const visible = historyMenu.style.display === "flex";
+        historyMenu.style.display = visible ? "none" : "flex";
+    });
+
+    document.addEventListener("click", e => {
+        if (!historyMenu.contains(e.target) && !historyContainer.contains(e.target)) {
+            historyMenu.style.display = "none";
+        }
+    });
+
+    document.getElementById("clear-history-btn").addEventListener("click", () => {
+        if (document.getElementById("clear-history-btn").disabled) return;
+        encounterHistory = [];
+        localStorage.removeItem("overlayEncounterHistory");
+        updateHistoryDropdown();
+        viewingMode = "current";
+        if (lastCombatData) renderData(lastCombatData);
+        else document.getElementById("title").textContent = "Waiting for combat...";
+    });
+}
+
 function setupNameTripleClick() {
     document.getElementById("rows").addEventListener("click", e => {
         if (!enableTripleClick || e.detail !== 3) return;
@@ -670,7 +925,7 @@ function setupNameTripleClick() {
             } else {
                 localStorage.removeItem("overlayHighlightedCombatant");
             }
-            if (lastCombatData) updateData(lastCombatData);
+            reRenderCurrentView();
         }
     });
 }
@@ -775,7 +1030,7 @@ function setupColumnDragDrop() {
             draggedTh.classList.remove("dragging");
             if (isDragging) {
                 localStorage.setItem("overlayColumnOrder", JSON.stringify(columnOrder));
-                if (lastCombatData) updateData(lastCombatData);
+                reRenderCurrentView();
                 setTimeout(() => wasDragging = false, 50);
             } else wasDragging = false;
             draggedTh = null; isDragging = false;
@@ -795,7 +1050,7 @@ function setupHeaderSorting() {
             localStorage.setItem("overlayOrder", sortOrder);
             updateControlsActiveState();
             updateSortIndicators();
-            if (lastCombatData) updateData(lastCombatData);
+            reRenderCurrentView();
         });
     });
 }
@@ -803,6 +1058,7 @@ function setupHeaderSorting() {
 function setupMenu() {
     const menuButton = document.getElementById("menu-button");
     const menu = document.getElementById("menu");
+    const historyMenu = document.getElementById("history-select-menu");
     const sections = [
         { t: "font-style-toggle", m: "font-style-menu", a: "font-style-arrow" },
         { t: "font-size-toggle", m: "font-size-menu", a: "font-size-arrow" },
@@ -818,6 +1074,7 @@ function setupMenu() {
 
     menuButton.addEventListener("click", e => {
         e.stopPropagation();
+        historyMenu.style.display = "none";
         const visible = menu.style.display === "flex";
         menu.style.display = visible ? "none" : "flex";
         if (!visible) closeAll();
@@ -865,13 +1122,25 @@ function setupControls() {
     document.querySelectorAll("#transparency-buttons button").forEach(btn => {
         btn.addEventListener("click", () => applyTransparency(btn.getAttribute("data-trans")));
     });
+    
+    document.getElementById("toggle-history").addEventListener("change", e => {
+        enableHistory = e.target.checked;
+        localStorage.setItem("overlayEnableHistory", enableHistory);
+        updateHistoryAvailability();
+        
+        if (!enableHistory && viewingMode !== "current") {
+            viewingMode = "current";
+            if (lastCombatData) renderData(lastCombatData);
+            else document.getElementById("title").textContent = "Waiting for combat...";
+        }
+    });
 
     document.querySelectorAll("#rowlimit-buttons button").forEach(btn => {
         btn.addEventListener("click", () => {
             rowLimit = parseInt(btn.getAttribute("data-rowlimit"), 10) || 24;
             localStorage.setItem("overlayRowLimit", rowLimit);
             updateActiveBtn("#rowlimit-buttons button", "data-rowlimit", rowLimit);
-            if (lastCombatData) updateData(lastCombatData);
+            reRenderCurrentView();
         });
     });
 
@@ -882,25 +1151,25 @@ function setupControls() {
     document.getElementById("toggle-short-dps").addEventListener("change", e => {
         useShortDps = e.target.checked;
         localStorage.setItem("overlayShortDps", useShortDps);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-short-hps").addEventListener("change", e => {
         useShortHps = e.target.checked;
         localStorage.setItem("overlayShortHps", useShortHps);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-short-healing").addEventListener("change", e => {
         useShortHealing = e.target.checked;
         localStorage.setItem("overlayShortHealing", useShortHealing);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-short-damage").addEventListener("change", e => {
         useShortDamage = e.target.checked;
         localStorage.setItem("overlayShortDamage", useShortDamage);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-triple-click").addEventListener("change", e => {
@@ -911,19 +1180,19 @@ function setupControls() {
             localStorage.removeItem("overlayHighlightedCombatant");
         }
         updateBoldTrackedAvailability();
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-bold-tracked").addEventListener("change", e => {
         enableBoldTracked = e.target.checked;
         localStorage.setItem("overlayBoldTracked", enableBoldTracked);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.getElementById("toggle-pin-tracked").addEventListener("change", e => {
         enablePinTracked = e.target.checked;
         localStorage.setItem("overlayPinTracked", enablePinTracked);
-        if (lastCombatData) updateData(lastCombatData);
+        reRenderCurrentView();
     });
 
     document.querySelectorAll("#sortby-buttons button").forEach(btn => {
@@ -935,7 +1204,7 @@ function setupControls() {
             localStorage.setItem("overlayOrder", sortOrder);
             updateControlsActiveState();
             updateSortIndicators();
-            if (lastCombatData) updateData(lastCombatData);
+            reRenderCurrentView();
         });
     });
 
@@ -945,7 +1214,7 @@ function setupControls() {
             localStorage.setItem("overlayOrder", sortOrder);
             updateControlsActiveState();
             updateSortIndicators();
-            if (lastCombatData) updateData(lastCombatData);
+            reRenderCurrentView();
         });
     });
 }
